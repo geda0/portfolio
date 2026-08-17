@@ -1,0 +1,130 @@
+[
+  {
+    "id": "services-offered",
+    "q": [
+      "what services do you offer",
+      "what do you offer",
+      "what can you do for me",
+      "what can you help with",
+      "what kind of work do you do",
+      "do you take on consulting",
+      "are you available for contract",
+      "are you for hire"
+    ],
+    "a": "Placeholder answer. Describe the work you take on — the systems you design, the stacks you use, and the shape of engagement you want. Close by offering to open the contact form, since that is what the assistant can actually do next."
+  },
+  {
+    "id": "build-a-website",
+    "q": [
+      "i need a website",
+      "can you build my website",
+      "i need a landing page",
+      "build me a web app",
+      "i need an mvp",
+      "can you do frontend"
+    ],
+    "a": "Placeholder answer for inbound project requests. Say whether this is in scope, point at the evidence on the site, and ask the one clarifying question that would let you scope it."
+  },
+  {
+    "id": "get-to-know-first",
+    "q": [
+      "tell me about yourself",
+      "who are you",
+      "introduce yourself",
+      "give me a quick overview"
+    ],
+    "a": "Placeholder intro. Offer the visitor a few directions — recent roles, a specific project, the resume — and ask which they want. Keep it short; the assistant should invite a follow-up rather than dump a biography."
+  },
+  {
+    "id": "contact-preferred-channel",
+    "q": [
+      "how do i contact him",
+      "can i reach out",
+      "how do i get in touch",
+      "is he hiring",
+      "is he available"
+    ],
+    "a": "Placeholder answer. Name your preferred channel and offer to open the contact form prefilled with what the visitor has already said.",
+    "trigger_tool": "open_contact_form"
+  },
+  {
+    "id": "resume-access",
+    "q": [
+      "can i see the resume",
+      "do you have a cv",
+      "send me the resume",
+      "show me his resume"
+    ],
+    "a": "Placeholder answer. Point at the Portfolio section and the resume PDF, and offer to navigate there.",
+    "trigger_tool": "navigate_to_section"
+  },
+  {
+    "id": "looking-for-next-role",
+    "q": [
+      "what is he looking for",
+      "what does he want next",
+      "what kind of role",
+      "what's next for him"
+    ],
+    "a": "Placeholder answer describing the role you want: level, ownership, domain, and the kind of team you do your best work on."
+  },
+  {
+    "id": "most-impressive-accomplishment",
+    "q": [
+      "most impressive accomplishment",
+      "biggest accomplishment",
+      "proudest achievement",
+      "what is he most proud of"
+    ],
+    "a": "Placeholder answer. Tell one specific story: the situation, the constraint that made it hard, what you did, and the result. Reuse the same story you put in bio.source.json speaking_points so the assistant stays consistent."
+  },
+  {
+    "id": "most-challenging-technical-problem",
+    "q": [
+      "most challenging technical problem",
+      "hardest technical problem",
+      "toughest technical problem",
+      "hardest problem he solved"
+    ],
+    "a": "Placeholder answer. A second story, different from the accomplishment above — ideally one where the interesting part was correctness, migration safety, or a tradeoff you had to defend."
+  },
+  {
+    "id": "platform-architecture-experience",
+    "q": [
+      "platform architecture",
+      "architecture experience",
+      "system design experience",
+      "how do you approach platform architecture"
+    ],
+    "a": "Placeholder answer. Name two or three concrete architectural decisions from different roles, then state the through-line that connects them."
+  },
+  {
+    "id": "compensation-direct-channel",
+    "q": [
+      "what's his salary expectation",
+      "how much does he want",
+      "what's his rate"
+    ],
+    "a": "Placeholder deflection. Compensation is handled directly, and the contact form is the right channel. Keep an answer like this for anything you do not want the assistant improvising on."
+  },
+  {
+    "id": "identity-disclosure-agent",
+    "q": [
+      "are you a bot",
+      "am i talking to a person",
+      "are you the site owner"
+    ],
+    "a": "No. I'm an assistant embedded in this portfolio site. I can answer questions about the owner's work and route you to them, but I'm not a person."
+  },
+  {
+    "id": "ai-tooling-usage",
+    "q": [
+      "cursor",
+      "claude code",
+      "ai coding tools",
+      "copilot",
+      "does he use ai tools"
+    ],
+    "a": "Placeholder answer about how you use AI tooling in your own work, and what on this site is an example of it."
+  }
+]

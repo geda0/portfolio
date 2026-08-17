@@ -1,0 +1,526 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Durable contact pipeline for Amplify-hosted portfolio.
+
+Parameters:
+  ResendApiKey:
+    Type: String
+    NoEcho: true
+  ContactToEmail:
+    Type: String
+  ContactFromEmail:
+    Type: String
+  ContactReportEmail:
+    Type: String
+    Default: ''
+  AlarmEmail:
+    Type: String
+  AdminApiKey:
+    Type: String
+    NoEcho: true
+  IpHashPepper:
+    Type: String
+    NoEcho: true
+    Default: ''
+  SmokeProbeKey:
+    Type: String
+    NoEcho: true
+    Default: ''
+  ContactCorsOrigins:
+    Type: String
+    Default: 'https://example.com,https://www.example.com,http://localhost:8000,http://127.0.0.1:8000,http://localhost:5173,http://127.0.0.1:5173'
+    Description: Comma-separated browser origins (no spaces) for contact HTTP API CORS and Lambda allowlist. First entry is the primary fallback when Origin is absent or not listed. Includes common local static-server ports in the default.
+  ChatSmokeUrl:
+    Type: String
+    Default: ''
+    Description: Full URL of the chat host smoke endpoint (e.g. https://<chat-host>/api/chat/smoke). When set, the scheduled daily report runs the deep live-agent probe against it. Empty = cheap dependency checks only in the email.
+  SmokeDeepInReport:
+    Type: String
+    Default: '1'
+    Description: "'0' disables the deep live-agent probe in the scheduled daily report (cheap checks only); any other value enables it when ChatSmokeUrl is set."
+
+Globals:
+  Function:
+    Runtime: nodejs22.x
+    Timeout: 15
+    MemorySize: 256
+    Handler: index.handler
+    Environment:
+      Variables:
+        CONTACT_MESSAGES_TABLE: !Ref ContactMessagesTable
+        SITE_EVENTS_TABLE: !Ref SiteEventsTable
+        CONTACT_DELIVERY_QUEUE_URL: !Ref ContactDeliveryQueue
+        RESEND_API_KEY: !Ref ResendApiKey
+        CONTACT_TO_EMAIL: !Ref ContactToEmail
+        CONTACT_FROM_EMAIL: !Ref ContactFromEmail
+        CONTACT_REPORT_EMAIL: !Ref ContactReportEmail
+        CONTACT_CORS_ORIGINS: !Ref ContactCorsOrigins
+
+Resources:
+  ContactApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      CorsConfiguration:
+        AllowMethods: [OPTIONS, GET, POST]
+        AllowHeaders: [Content-Type, x-admin-key]
+        AllowOrigins: !Split [',', !Ref ContactCorsOrigins]
+      # Conservative stage-level throttling for a personal portfolio.
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 10
+        ThrottlingRateLimit: 5
+      # Tighter limits on admin routes (low-traffic, sensitive; slows brute-force
+      # attempts against x-admin-key without affecting public POST /api/contact).
+      RouteSettings:
+        'GET /api/contact/admin/summary':
+          ThrottlingBurstLimit: 5
+          ThrottlingRateLimit: 2
+        'GET /api/contact/admin/messages':
+          ThrottlingBurstLimit: 5
+          ThrottlingRateLimit: 2
+        'GET /api/contact/admin/messages/{id}':
+          ThrottlingBurstLimit: 5
+          ThrottlingRateLimit: 2
+        'GET /api/contact/admin/health':
+          ThrottlingBurstLimit: 5
+          ThrottlingRateLimit: 2
+        'POST /api/contact/admin/retry/{id}':
+          ThrottlingBurstLimit: 5
+          ThrottlingRateLimit: 2
+        'POST /api/contact/admin/messages/{id}/suppress-report':
+          ThrottlingBurstLimit: 5
+          ThrottlingRateLimit: 2
+        'GET /api/chat/admin/transcripts':
+          ThrottlingBurstLimit: 5
+          ThrottlingRateLimit: 2
+        'GET /api/chat/admin/transcripts/{id}':
+          ThrottlingBurstLimit: 5
+          ThrottlingRateLimit: 2
+        'POST /api/chat/admin/transcripts/{id}/note':
+          ThrottlingBurstLimit: 5
+          ThrottlingRateLimit: 2
+        'POST /api/chat/admin/transcripts/{id}/reviewed':
+          ThrottlingBurstLimit: 5
+          ThrottlingRateLimit: 2
+        'GET /api/chat/admin/transcripts/summary':
+          ThrottlingBurstLimit: 5
+          ThrottlingRateLimit: 2
+        'GET /api/contact/admin/daily-report':
+          ThrottlingBurstLimit: 5
+          ThrottlingRateLimit: 2
+        # Public first-party analytics beacon: higher ceiling than the default so
+        # normal browsing doesn't get throttled; it is fire-and-forget so drops are safe.
+        'POST /api/events':
+          ThrottlingBurstLimit: 40
+          ThrottlingRateLimit: 20
+
+  ContactMessagesTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: listPk
+          AttributeType: S
+        - AttributeName: createdAt
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: byCreatedAt
+          KeySchema:
+            - AttributeName: listPk
+              KeyType: HASH
+            - AttributeName: createdAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+
+  ChatTranscriptsTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: listPk
+          AttributeType: S
+        - AttributeName: createdAt
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: byCreatedAt
+          KeySchema:
+            - AttributeName: listPk
+              KeyType: HASH
+            - AttributeName: createdAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+
+  # First-party site-interaction events (analytics we own). Same id+byCreatedAt
+  # GSI shape as the other tables so the daily report can range-query a UTC day.
+  # Raw rows self-expire via the `ttl` attribute (set ~120 days out in code).
+  SiteEventsTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: listPk
+          AttributeType: S
+        - AttributeName: createdAt
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: byCreatedAt
+          KeySchema:
+            - AttributeName: listPk
+              KeyType: HASH
+            - AttributeName: createdAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+
+  ContactDeliveryQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      VisibilityTimeout: 60
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt ContactDeliveryDlq.Arn
+        maxReceiveCount: 5
+
+  ContactDeliveryDlq:
+    Type: AWS::SQS::Queue
+
+  ContactAlarmTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      Subscription:
+        - Protocol: email
+          Endpoint: !Ref AlarmEmail
+
+  ContactDlqAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Contact delivery DLQ has pending messages.
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt ContactDeliveryDlq.QueueName
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      AlarmActions:
+        - !Ref ContactAlarmTopic
+
+  DailyReportErrorsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Daily report Lambda is erroring (scheduled digest unreliable).
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref DailyReportFunction
+      AlarmActions:
+        - !Ref ContactAlarmTopic
+
+  ContactFailureReportErrorsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Contact failure-report Lambda is erroring (scheduled report unreliable).
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref ContactFailureReportFunction
+      AlarmActions:
+        - !Ref ContactAlarmTopic
+
+  ContactIngressFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: contact-ingress.handler
+      Environment:
+        Variables:
+          IP_HASH_PEPPER: !Ref IpHashPepper
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ContactMessagesTable
+        - SQSSendMessagePolicy:
+            QueueName: !GetAtt ContactDeliveryQueue.QueueName
+      Events:
+        ContactApi:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ContactApi
+            Path: /api/contact
+            Method: POST
+        ContactApiOptions:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ContactApi
+            Path: /api/contact
+            Method: OPTIONS
+
+  EventsIngressFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: events-ingress.handler
+      Environment:
+        Variables:
+          IP_HASH_PEPPER: !Ref IpHashPepper
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref SiteEventsTable
+      Events:
+        EventsApi:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ContactApi
+            Path: /api/events
+            Method: POST
+        EventsApiOptions:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ContactApi
+            Path: /api/events
+            Method: OPTIONS
+
+  DailyReportFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: contact-daily-report.handler
+      Timeout: 60
+      Environment:
+        Variables:
+          CHAT_TRANSCRIPTS_TABLE: !Ref ChatTranscriptsTable
+          ADMIN_API_KEY: !Ref AdminApiKey
+          CHAT_SMOKE_URL: !Ref ChatSmokeUrl
+          SMOKE_DEEP_IN_REPORT: !Ref SmokeDeepInReport
+          SMOKE_PROBE_KEY: !Ref SmokeProbeKey
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref ContactMessagesTable
+        - DynamoDBReadPolicy:
+            TableName: !Ref ChatTranscriptsTable
+        - DynamoDBReadPolicy:
+            TableName: !Ref SiteEventsTable
+      Events:
+        DailyDigest:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 12 * * ? *)
+
+  ContactSenderFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: contact-sender.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ContactMessagesTable
+      Events:
+        ContactQueue:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt ContactDeliveryQueue.Arn
+            BatchSize: 10
+
+  ContactFailureReportFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: contact-report.handler
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref ContactMessagesTable
+      Events:
+        DailyReport:
+          Type: Schedule
+          Properties:
+            Schedule: cron(30 11 * * ? *)
+
+  ContactAdminFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: contact-admin.handler
+      Environment:
+        Variables:
+          ADMIN_API_KEY: !Ref AdminApiKey
+          CONTACT_DELIVERY_DLQ_URL: !Ref ContactDeliveryDlq
+          CONTACT_DLQ_ALARM_NAME: !Ref ContactDlqAlarm
+          CHAT_TRANSCRIPTS_TABLE: !Ref ChatTranscriptsTable
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref ContactMessagesTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ContactMessagesTable
+        - DynamoDBReadPolicy:
+            TableName: !Ref ChatTranscriptsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ChatTranscriptsTable
+        - DynamoDBReadPolicy:
+            TableName: !Ref SiteEventsTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - sqs:GetQueueAttributes
+                - sqs:SendMessage
+              Resource:
+                - !GetAtt ContactDeliveryQueue.Arn
+                - !GetAtt ContactDeliveryDlq.Arn
+            - Effect: Allow
+              Action:
+                - cloudwatch:DescribeAlarms
+              Resource: !GetAtt ContactDlqAlarm.Arn
+      Events:
+        ContactAdminSummary:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ContactApi
+            Path: /api/contact/admin/summary
+            Method: GET
+        ContactAdminMessages:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ContactApi
+            Path: /api/contact/admin/messages
+            Method: GET
+        ContactAdminMessageDetail:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ContactApi
+            Path: /api/contact/admin/messages/{id}
+            Method: GET
+        ContactAdminHealth:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ContactApi
+            Path: /api/contact/admin/health
+            Method: GET
+        ContactAdminSmoke:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ContactApi
+            Path: /api/contact/admin/smoke
+            Method: GET
+        ContactAdminSession:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ContactApi
+            Path: /api/contact/admin/session/{id}
+            Method: GET
+        ContactAdminDailyReport:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ContactApi
+            Path: /api/contact/admin/daily-report
+            Method: GET
+        ContactAdminRetry:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ContactApi
+            Path: /api/contact/admin/retry/{id}
+            Method: POST
+        ContactAdminSuppressReport:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ContactApi
+            Path: /api/contact/admin/messages/{id}/suppress-report
+            Method: POST
+        ContactAdminOptions:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ContactApi
+            Path: /api/contact/admin/{proxy+}
+            Method: OPTIONS
+        ChatAdminTranscripts:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ContactApi
+            Path: /api/chat/admin/transcripts
+            Method: GET
+        ChatAdminTranscriptDetail:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ContactApi
+            Path: /api/chat/admin/transcripts/{id}
+            Method: GET
+        ChatAdminTranscriptNote:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ContactApi
+            Path: /api/chat/admin/transcripts/{id}/note
+            Method: POST
+        ChatAdminTranscriptReviewed:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ContactApi
+            Path: /api/chat/admin/transcripts/{id}/reviewed
+            Method: POST
+        ChatAdminTranscriptsSummary:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ContactApi
+            Path: /api/chat/admin/transcripts/summary
+            Method: GET
+        ChatAdminOptions:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ContactApi
+            Path: /api/chat/admin/{proxy+}
+            Method: OPTIONS
+
+Outputs:
+  ContactApiUrl:
+    Value: !Sub https://${ContactApi}.execute-api.${AWS::Region}.amazonaws.com/api/contact
+  ContactMessagesTableName:
+    Value: !Ref ContactMessagesTable
+  ContactDeliveryQueueUrl:
+    Value: !Ref ContactDeliveryQueue
+  ChatTranscriptsTableName:
+    Value: !Ref ChatTranscriptsTable
+  SiteEventsTableName:
+    Value: !Ref SiteEventsTable
+  EventsApiUrl:
+    Value: !Sub https://${ContactApi}.execute-api.${AWS::Region}.amazonaws.com/api/events

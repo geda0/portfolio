@@ -1,0 +1,39 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>
+endobj
+4 0 obj
+<< /Length 506 >>
+stream
+BT /F1 22 Tf 72 720 Td (Your Name) Tj ET
+BT /F1 12 Tf 72 696 Td (Placeholder resume - replace resume/resume.pdf with your own.) Tj ET
+BT /F1 12 Tf 72 676 Td (hello@example.com  |  example.com  |  github.com/your-handle) Tj ET
+BT /F1 14 Tf 72 636 Td (Experience) Tj ET
+BT /F1 11 Tf 72 616 Td (Senior Engineer - Acme Corp - 20XX-Present) Tj ET
+BT /F1 11 Tf 72 598 Td (Engineer - Globex - 20XX-20XX) Tj ET
+BT /F1 14 Tf 72 558 Td (Education) Tj ET
+BT /F1 11 Tf 72 538 Td (Degree - Placeholder University) Tj ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000241 00000 n 
+0000000798 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+868
+%%EOF

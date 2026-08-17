@@ -1,0 +1,151 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Portfolio chat API (FastAPI + Gemini on Lambda container, HTTP API).
+
+Parameters:
+  GeminiApiKey:
+    Type: String
+    NoEcho: true
+    Description: Google AI Studio / Gemini API key (required for real traffic; pass via deploy — no template default).
+  GeminiModel:
+    Type: String
+    Default: gemini-3.1-flash-lite
+    Description: >
+      Primary Gemini API model id (see https://ai.google.dev/gemini-api/docs/models ).
+      Default Gemini 3.1 Flash Lite (gemini-3.1-flash-lite).
+  GeminiFallbackModel:
+    Type: String
+    Default: gemma-4-26b-a4b-it
+    Description: >
+      Fallback model when the primary returns rate limits (429 / quota). Default Gemma 4 26B A4B IT.
+  GeminiLiveModel:
+    Type: String
+    Default: gemini-3.1-flash-live-preview
+    Description: >
+      Gemini Live API model id for browser voice sessions (Multimodal Live / BidiGenerateContent).
+      Overridable at runtime by CHAT_VOICE_MODEL when that env is non-empty (same container).
+  ChatVoiceModel:
+    Type: String
+    Default: ''
+    Description: >
+      Optional voice-only Live model id (maps to CHAT_VOICE_MODEL). When empty, voice uses GeminiLiveModel / GEMINI_LIVE_MODEL only.
+  ChatCorsOrigins:
+    Type: String
+    Default: 'https://chat.example.com,https://example.com,https://www.example.com'
+    Description: Comma-separated browser origins for CHAT_CORS_ORIGINS in the function (FastAPI CORS; apex and www variants are expanded automatically for two-label hosts).
+  ChatTranscriptsTableName:
+    Type: String
+    Default: ''
+    Description: Optional external DynamoDB table for transcript persistence (from contact stack output).
+  ChatErrorAlarmEmail:
+    Type: String
+    Default: ''
+    Description: Optional email for SNS when chat Lambda errors exceed alarm threshold (empty skips alarm).
+  SmokeProbeKey:
+    Type: String
+    NoEcho: true
+    Default: ''
+    Description: Probe-scoped secret validated by /api/chat/smoke (x-smoke-key). Distinct from the contact admin key.
+
+Conditions:
+  HasChatTranscriptsTable: !Not [!Equals [!Ref ChatTranscriptsTableName, '']]
+  HasChatErrorAlarm: !Not [!Equals [!Ref ChatErrorAlarmEmail, '']]
+
+Globals:
+  Function:
+    Timeout: 60
+    MemorySize: 1536
+    Architectures:
+      - x86_64
+
+Resources:
+  ChatHttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      # Conservative stage-level throttling — protects the Gemini API key from
+      # cost abuse on a personal portfolio chat endpoint.
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 10
+        ThrottlingRateLimit: 5
+  ChatFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      DockerContext: ../
+      Dockerfile: docker/chat/Dockerfile.lambda
+    Properties:
+      PackageType: Image
+      Policies:
+        - !If
+          - HasChatTranscriptsTable
+          - Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                Resource: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ChatTranscriptsTableName}
+          - !Ref AWS::NoValue
+      Environment:
+        Variables:
+          CHAT_PROVIDER: gemini
+          GEMINI_API_KEY: !Ref GeminiApiKey
+          GEMINI_MODEL: !Ref GeminiModel
+          GEMINI_FALLBACK_MODEL: !Ref GeminiFallbackModel
+          GEMINI_LIVE_MODEL: !Ref GeminiLiveModel
+          CHAT_VOICE_MODEL: !Ref ChatVoiceModel
+          CHAT_LIVE_RELAY: '0'
+          CHAT_LIVE_VOICE_STRICT: '0'
+          CHAT_CORS_ORIGINS: !Ref ChatCorsOrigins
+          CHAT_TRANSCRIPTS_TABLE: !Ref ChatTranscriptsTableName
+          SMOKE_PROBE_KEY: !Ref SmokeProbeKey
+      Events:
+        RootAny:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ChatHttpApi
+            Path: /
+            Method: ANY
+        ProxyAny:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ChatHttpApi
+            Path: /{proxy+}
+            Method: ANY
+
+  ChatErrorTopic:
+    Type: AWS::SNS::Topic
+    Condition: HasChatErrorAlarm
+    Properties:
+      Subscription:
+        - Protocol: email
+          Endpoint: !Ref ChatErrorAlarmEmail
+
+  ChatLambdaErrorsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasChatErrorAlarm
+    Properties:
+      AlarmDescription: Chat Lambda errors (sum over 5 minutes).
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref ChatFunction
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref ChatErrorTopic
+
+Outputs:
+  ChatPostApiUrl:
+    Description: >
+      Full URL for POST /api/chat (hero text) — use in portfolio:chat-api-url meta.
+      Same API origin also serves POST /api/live/session, GET /health, GET /ready.
+      Voice: CHAT_LIVE_RELAY=0 (browser direct_google); set CHAT_LIVE_VOICE_STRICT=1 to return 503 on POST /api/live/session without minting. ECS: CHAT_LIVE_RELAY=1 for relay. Session JSON includes voiceBrowserExperience and voiceHint.
+    Value: !Sub https://${ChatHttpApi}.execute-api.${AWS::Region}.amazonaws.com/api/chat
+  ChatHttpApiId:
+    Value: !Ref ChatHttpApi
+  ChatApiBaseUrl:
+    Value: !Sub https://${ChatHttpApi}.execute-api.${AWS::Region}.amazonaws.com

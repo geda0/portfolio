@@ -1,0 +1,19 @@
+[
+    {
+      "id": "older-one",
+      "title": "Older Project One",
+      "description": "Short description of an older project worth listing but not featuring.",
+      "link": "https://example.com",
+      "linkText": "example.com"
+    },
+    {
+      "id": "older-two",
+      "title": "Older Project Two",
+      "description": "Entries here need no image — title, description, and an optional link are enough."
+    },
+    {
+      "id": "older-three",
+      "title": "Older Project Three",
+      "description": "Delete this file's contents down to an empty array if you have nothing to list."
+    }
+]

@@ -1,0 +1,40 @@
+node_modules
+.cursor/
+
+.env
+.env.*
+!.env.example
+!docker/.env.example
+aws/.env
+
+# GCP / AWS credentials (never commit)
+**/google-sa*.json
+**/*service-account*.json
+**/*-credentials.json
+*.pem
+
+DNS_A
+.aws-sam
+
+# OS / editor noise
+.DS_Store
+**/.DS_Store
+
+# Python bytecode
+*.pyc
+**/__pycache__/
+
+# Local installers (never commit)
+AWSCLIV2.pkg
+
+# Optional local overrides
+config.local.js
+
+# Local CI/CD + secrets (never commit): copy from secrets.example/
+.secrets/
+docker/chat/.venv/
+docker/chat/.venv-ci/
+docker/chat/.venv-samtest/
+
+# leftover agent-session worktrees (Claude/Cursor snapshots — never commit)
+.claude/worktrees/

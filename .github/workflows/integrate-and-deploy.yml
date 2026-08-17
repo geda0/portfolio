@@ -1,0 +1,135 @@
+name: Integrate and deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy_environment:
+        description: 'AWS target — stage: separate contact stack; optional CHAT_SAM_STACK_NAME_* + GEMINI_API_KEY deploys Lambda chat. SAM ECS (voice always on): CHAT_ECS_SAM_STACK_NAME_* + VPC/subnets + GEMINI; CHAT_VOICE_ECS_BOOTSTRAP=1 (default) auto-fills default VPC, ECR, stack names (see chat-deploy.env.example). Optional repo vars: CHAT_ECS_AUTO_SYNC_CHAT_URL, CHAT_LIVE_VOICE_STRICT (503 when Lambda relay off).'
+        required: true
+        default: prod
+        type: choice
+        options:
+          - prod
+          - stage
+      aws_auth:
+        description: 'How to authenticate to AWS'
+        required: true
+        default: oidc
+        type: choice
+        options:
+          - oidc
+          - keys
+      sync_api_urls:
+        description: 'After deploy, patch index.html + admin/index.html; download artifact to commit or upload to hosting'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: integrate-deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  chat-eval-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install chat dependencies
+        working-directory: docker/chat
+        run: python -m pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Run phase4 eval gate
+        working-directory: docker/chat
+        run: PYTHONPATH=. python -m pytest tests/test_eval_gate.py -v
+
+  integrate-deploy:
+    needs:
+      - chat-eval-gate
+    runs-on: ubuntu-latest
+    # Secret names match secrets.example/deploy.env.example (without the "export" prefix).
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION || 'us-east-2' }}
+      SAM_STACK_NAME: ${{ vars.SAM_STACK_NAME || 'portfolio' }}
+      SAM_STACK_NAME_STAGE: ${{ vars.SAM_STACK_NAME_STAGE || 'portfolio-staging' }}
+      CHAT_STAGE_CHAT_API_URL: ${{ vars.CHAT_STAGE_CHAT_API_URL }}
+      CHAT_PROD_CHAT_API_URL: ${{ vars.CHAT_PROD_CHAT_API_URL }}
+      CHAT_ECR_REPOSITORY_URI: ${{ vars.CHAT_ECR_REPOSITORY_URI }}
+      CHAT_ECS_SAM_STACK_NAME_STAGE: ${{ vars.CHAT_ECS_SAM_STACK_NAME_STAGE }}
+      CHAT_ECS_SAM_STACK_NAME_PROD: ${{ vars.CHAT_ECS_SAM_STACK_NAME_PROD }}
+      CHAT_ECS_VPC_ID: ${{ vars.CHAT_ECS_VPC_ID }}
+      CHAT_ECS_SUBNET_IDS: ${{ vars.CHAT_ECS_SUBNET_IDS }}
+      CHAT_ECR_REPO_NAME: ${{ vars.CHAT_ECR_REPO_NAME }}
+      CHAT_ECS_CREATE_DEFAULT_VPC: ${{ vars.CHAT_ECS_CREATE_DEFAULT_VPC }}
+      CHAT_ECS_CLUSTER_STAGE: ${{ vars.CHAT_ECS_CLUSTER_STAGE }}
+      CHAT_ECS_SERVICE_STAGE: ${{ vars.CHAT_ECS_SERVICE_STAGE }}
+      CHAT_ECS_CLUSTER_PROD: ${{ vars.CHAT_ECS_CLUSTER_PROD }}
+      CHAT_ECS_SERVICE_PROD: ${{ vars.CHAT_ECS_SERVICE_PROD }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+      GEMINI_FALLBACK_MODEL: ${{ vars.GEMINI_FALLBACK_MODEL }}
+      GEMINI_LIVE_MODEL: ${{ vars.GEMINI_LIVE_MODEL }}
+      CHAT_VOICE_MODEL: ${{ vars.CHAT_VOICE_MODEL }}
+      CHAT_SAM_STACK_NAME: ${{ vars.CHAT_SAM_STACK_NAME }}
+      CHAT_SAM_STACK_NAME_STAGE: ${{ vars.CHAT_SAM_STACK_NAME_STAGE }}
+      CHAT_SAM_STACK_NAME_PROD: ${{ vars.CHAT_SAM_STACK_NAME_PROD }}
+      CHAT_CORS_ORIGINS: ${{ vars.CHAT_CORS_ORIGINS }}
+      CHAT_VOICE_ECS_BOOTSTRAP: ${{ vars.CHAT_VOICE_ECS_BOOTSTRAP }}
+      CHAT_ECS_AUTO_SYNC_CHAT_URL: ${{ vars.CHAT_ECS_AUTO_SYNC_CHAT_URL }}
+      CHAT_LIVE_VOICE_STRICT: ${{ vars.CHAT_LIVE_VOICE_STRICT }}
+      RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+      CONTACT_TO_EMAIL: ${{ secrets.CONTACT_TO_EMAIL }}
+      CONTACT_FROM_EMAIL: ${{ secrets.CONTACT_FROM_EMAIL }}
+      CONTACT_REPORT_EMAIL: ${{ secrets.CONTACT_REPORT_EMAIL }}
+      ALARM_EMAIL: ${{ secrets.ALARM_EMAIL }}
+      ADMIN_API_KEY: ${{ secrets.ADMIN_API_KEY }}
+      CONTACT_CORS_ORIGINS: ${{ vars.CONTACT_CORS_ORIGINS }}
+      SYNC_API_URLS: ${{ inputs.sync_api_urls == true && '1' || '0' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install SAM CLI
+        run: pip install "aws-sam-cli>=1.120.0"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Configure AWS credentials (OIDC)
+        if: inputs.aws_auth == 'oidc'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Configure AWS credentials (access keys)
+        if: inputs.aws_auth == 'keys'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Integrate and deploy
+        run: bash scripts/integrate-and-deploy.sh ${{ inputs.deploy_environment }}
+
+      - name: Upload patched HTML (when sync enabled)
+        if: inputs.sync_api_urls == true
+        uses: actions/upload-artifact@v4
+        with:
+          name: site-html-api-urls
+          path: |
+            index.html
+            admin/index.html

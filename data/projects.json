@@ -1,0 +1,152 @@
+{
+  "playground": [
+    {
+      "id": "sample-toolkit",
+      "title": "Sample Toolkit",
+      "label": "Open project",
+      "cardDescription": "One-line hook for your flagship side project. Say what it is and why it is interesting in a single breath — this is the text on the card, so keep it short and concrete.",
+      "chatSummary": "Plain-prose summary of this project for the AI assistant. Unlike cardDescription (a hook) and description (HTML for the dialog), this field is what gets injected into the chat knowledge pack, so write it as continuous prose the model can quote from: what the project is, what problem it solves, the interesting technical decisions, and what it demonstrates about how you work. Two to five sentences is usually enough. Replace this placeholder with your own project.",
+      "description": "<p><strong>Sample Toolkit</strong> is a placeholder for your flagship playground project. This field holds the rich HTML shown in the project dialog, so you can use paragraphs, <code>code</code>, <strong>bold</strong>, and lists.</p><p><strong>The problem.</strong> Describe the itch you were scratching — a real constraint, not a feature list.</p><p><strong>The approach.</strong> Explain the two or three decisions you would defend in an interview: the architecture, the tradeoff you accepted, the thing you deliberately did not build.</p><p><strong>The result.</strong> What shipped, what it proved, and what you would do differently next time.</p>",
+      "image": "img/project-placeholder.svg",
+      "imageAlt": "Placeholder project image — replace with a screenshot or diagram of your project",
+      "link": "#contact",
+      "linkText": "Get in touch",
+      "contactPrefill": {
+        "subject": "Sample Toolkit",
+        "message": "Hi — I'd like to hear more about Sample Toolkit."
+      },
+      "tech": [
+        "Node.js",
+        "TypeScript",
+        "Testing",
+        "CI/CD"
+      ],
+      "hidden": false,
+      "featured": true,
+      "role": "Solo build · design, implementation, release"
+    },
+    {
+      "id": "sample-assistant",
+      "title": "Sample AI Assistant",
+      "cardDescription": "A second playground card. Use these to show range — an experiment, a tool you built for yourself, something unfinished but interesting.",
+      "chatSummary": "Placeholder summary of a second project for the chat knowledge pack. Describe the streaming UX, the model routing, the persistence layer, or whatever the substance of your own project happens to be. The assistant answers from this text, so specifics beat adjectives.",
+      "description": "<p><strong>Sample AI Assistant</strong> is a placeholder for a second playground project.</p><p><strong>What it does.</strong> One paragraph on the user-visible behavior.</p><p><strong>How it works.</strong> One paragraph on the interesting internals — the streaming protocol, the fallback path, the storage model.</p><p><strong>What it demonstrates.</strong> One paragraph tying it back to how you build production systems.</p>",
+      "image": "img/project-placeholder.svg",
+      "imageAlt": "Placeholder project image — replace with a screenshot of your own project",
+      "link": "#contact",
+      "linkText": "Get in touch",
+      "tech": [
+        "Python",
+        "FastAPI",
+        "Streaming",
+        "Observability"
+      ],
+      "hidden": false,
+      "role": "Backend + frontend · end to end"
+    },
+    {
+      "id": "sample-hardware",
+      "title": "Sample Hardware Project",
+      "cardDescription": "A third card, for something off the beaten path — hardware, a game, a visualization, a weekend hack.",
+      "description": "<p><strong>Sample Hardware Project</strong> is a placeholder for a hobby build.</p><p>Playground cards do not all need the same depth. A short, honest paragraph about something you enjoyed building is worth more than padded copy.</p>",
+      "image": "img/project-placeholder.svg",
+      "imageAlt": "Placeholder project image — replace with a photo of your own build",
+      "link": "#contact",
+      "linkText": "Get in touch",
+      "tech": [
+        "Python",
+        "Raspberry Pi",
+        "Sensors"
+      ],
+      "hidden": false,
+      "role": "Hobby build · hardware and firmware"
+    }
+  ],
+  "portfolio": [
+    {
+      "id": "northwind",
+      "title": "Northwind Systems",
+      "role": "Senior Engineer · Platform & Data",
+      "problem": "State the business problem in one sentence — the thing that was actually at risk.",
+      "work": "State what you personally did, in one sentence. Scope, not job description.",
+      "outcome": "State the measurable result in one sentence. Numbers if you have them, honest hedging if you do not.",
+      "cardDescription": "Placeholder role card. One or two sentences on what this company does and what you owned there.",
+      "description": "<p><strong>Northwind Systems</strong> — placeholder for a professional role.</p><p><strong>The problem.</strong> What was broken, slow, expensive, or unscalable when you arrived.</p><p><strong>The work.</strong> The design you chose and why. Name the tradeoffs — a role card that only lists wins reads as marketing.</p><p><strong>The outcome.</strong> What changed for users, cost, or reliability, and how you knew.</p>",
+      "image": "img/project-placeholder.svg",
+      "imageAlt": "Placeholder company image — replace with a product screenshot or a logo you have the rights to use",
+      "link": "https://example.com",
+      "linkText": "example.com",
+      "tech": [
+        "Java",
+        "Kubernetes",
+        "AWS",
+        "Spark",
+        "Terraform"
+      ],
+      "hidden": false
+    },
+    {
+      "id": "contoso",
+      "title": "Contoso Cloud",
+      "role": "Staff Engineer · APIs & Integrations",
+      "problem": "One-sentence problem statement.",
+      "work": "One-sentence description of what you owned.",
+      "outcome": "One-sentence result.",
+      "cardDescription": "Placeholder role card for a second position.",
+      "description": "<p><strong>Contoso Cloud</strong> — placeholder for a professional role.</p><p>Keep the same problem / work / outcome shape across roles so the section reads consistently.</p>",
+      "image": "img/project-placeholder.svg",
+      "imageAlt": "Placeholder company image",
+      "link": "https://example.com",
+      "linkText": "example.com",
+      "tech": [
+        "Go",
+        "gRPC",
+        "GraphQL",
+        "PostgreSQL",
+        "MongoDB"
+      ],
+      "hidden": false
+    },
+    {
+      "id": "fabrikam",
+      "title": "Fabrikam Retail",
+      "role": "Engineer · Commerce Platform",
+      "problem": "One-sentence problem statement.",
+      "work": "One-sentence description of what you owned.",
+      "outcome": "One-sentence result.",
+      "cardDescription": "Placeholder role card for a third position.",
+      "description": "<p><strong>Fabrikam Retail</strong> — placeholder for a professional role.</p><p>Older roles can be shorter. Depth belongs on the work that still represents you.</p>",
+      "image": "img/project-placeholder.svg",
+      "imageAlt": "Placeholder company image",
+      "link": "https://example.com",
+      "linkText": "example.com",
+      "tech": [
+        "Ruby on Rails",
+        "React",
+        "AWS Lambda",
+        "DynamoDB"
+      ],
+      "hidden": false
+    },
+    {
+      "id": "placeholder-university",
+      "title": "Master's in Computer Science",
+      "role": "Placeholder University",
+      "problem": "What you wanted to learn.",
+      "work": "What you studied and built.",
+      "outcome": "What it changed about how you work.",
+      "cardDescription": "Placeholder education card — the portfolio section can hold degrees and certifications alongside roles.",
+      "description": "<p><strong>Master's in Computer Science</strong> — Placeholder University.</p><p>Focus areas, thesis, or capstone project go here. Delete this card if you would rather keep the section to work history only.</p>",
+      "image": "img/project-placeholder.svg",
+      "imageAlt": "Placeholder education image",
+      "link": "https://example.com",
+      "linkText": "example.com",
+      "tech": [
+        "Machine Learning",
+        "Distributed Systems",
+        "Algorithms"
+      ],
+      "hidden": false
+    }
+  ]
+}

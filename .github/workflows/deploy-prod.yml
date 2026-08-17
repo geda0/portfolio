@@ -1,0 +1,124 @@
+# Auto-deploys the PRODUCTION BACKEND (SAM `page` stack) on every push to `main` that
+# touches a deploy-relevant path. The frontend is built by AWS Amplify (watches `main` →
+# www.example.com), so this workflow does NOT publish the static site and does NOT
+# patch HTML (SYNC_API_URLS=0; `main` already carries the prod API URLs). Deploys contact
+# (`page`) + prod chat to ECS Express Mode (portfolio-chat-express-prod; CHAT_DEPLOY_TARGET=express).
+# Gated by the full chat pytest suite (incl. eval gate) + node --test, so a red baseline
+# never reaches prod. Uses a PROD-only OIDC role (AWS_DEPLOY_ROLE_ARN_PROD, scoped to the
+# `page` + portfolio-chat-express-prod stacks, main-branch trust). workflow_dispatch kept as a manual fallback.
+name: deploy-prod
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'aws/**'
+      - 'docker/chat/**'
+      - 'index.html'
+      - 'admin/index.html'
+      - 'scripts/**'
+      - 'data/**'
+      - '.github/workflows/deploy-prod.yml'
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Guard — main ships PROD (not staging) API URLs
+        # Fail fast and loudly if a staging host (fvfqpef8kb / chat-api-stage) ever rides
+        # onto main again (the 2026-06-04 agent->main fast-forward incident, hotfixed in
+        # 843e648). Amplify serves the committed HTML as-is, so a leaked staging meta would
+        # publish staging backends to prod. The generic `node --test` step below also enforces
+        # this via GITHUB_REF_NAME=main; this named step makes a regression unmistakable.
+        env:
+          PORTFOLIO_EXPECTED_ENV: prod
+        run: node --test test/frontend-api-url-env-guard.test.mjs
+
+      - name: Run node:test suite
+        run: node --test
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install chat dependencies
+        working-directory: docker/chat
+        run: pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Run chat suite (includes eval gate)
+        working-directory: docker/chat
+        run: PYTHONPATH=. python -m pytest tests -q
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    # Secret names match secrets.example/deploy.env.example (without the "export" prefix).
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION || 'us-east-2' }}
+      SAM_STACK_NAME: ${{ vars.SAM_STACK_NAME || 'portfolio' }}
+      SAM_STACK_NAME_STAGE: ${{ vars.SAM_STACK_NAME_STAGE || 'portfolio-staging' }}
+      CHAT_STAGE_CHAT_API_URL: ${{ vars.CHAT_STAGE_CHAT_API_URL }}
+      CHAT_PROD_CHAT_API_URL: ${{ vars.CHAT_PROD_CHAT_API_URL }}
+      # Chat backend (ADR-0007 Phase 4): prod deploys to ECS Express Mode, like staging.
+      # App Runner was maintenance-mode; ECS Express Mode is AWS's managed successor (image+port
+      # -> HTTPS on Fargate, ECS-managed ALB/TLS/autoscaling). Prod chat now AUTO-deploys on chat
+      # changes (was manual). Express provisions networking itself — no VPC/subnet/cert config.
+      CHAT_DEPLOY_TARGET: express
+      CHAT_EXPRESS_STACK_NAME: portfolio-chat-express-prod
+      CHAT_ECR_REPOSITORY_URI: 123456789012.dkr.ecr.us-east-2.amazonaws.com/portfolio-chat
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GEMINI_MODEL: gemini-3.1-flash-lite
+      GEMINI_FALLBACK_MODEL: gemma-4-26b-a4b-it
+      GEMINI_LIVE_MODEL: gemini-3.1-flash-live-preview
+      CHAT_VOICE_MODEL: gemini-3.1-flash-live-preview
+      CHAT_SAM_STACK_NAME: ${{ vars.CHAT_SAM_STACK_NAME }}
+      CHAT_SAM_STACK_NAME_STAGE: ${{ vars.CHAT_SAM_STACK_NAME_STAGE }}
+      CHAT_SAM_STACK_NAME_PROD: ${{ vars.CHAT_SAM_STACK_NAME_PROD }}
+      CHAT_CORS_ORIGINS: ${{ vars.CHAT_CORS_ORIGINS }}
+      RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+      CONTACT_TO_EMAIL: ${{ secrets.CONTACT_TO_EMAIL }}
+      CONTACT_FROM_EMAIL: ${{ secrets.CONTACT_FROM_EMAIL }}
+      CONTACT_REPORT_EMAIL: ${{ secrets.CONTACT_REPORT_EMAIL }}
+      ALARM_EMAIL: ${{ secrets.ALARM_EMAIL }}
+      ADMIN_API_KEY: ${{ secrets.ADMIN_API_KEY }}
+      IP_HASH_PEPPER: ${{ secrets.IP_HASH_PEPPER }}
+      SMOKE_PROBE_KEY: ${{ secrets.SMOKE_PROBE_KEY }}
+      CONTACT_CORS_ORIGINS: ${{ vars.CONTACT_CORS_ORIGINS }}
+      SYNC_API_URLS: '0'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install SAM CLI
+        run: pip install "aws-sam-cli>=1.120.0"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN_PROD }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Integrate and deploy (prod)
+        run: bash scripts/integrate-and-deploy.sh prod

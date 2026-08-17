@@ -1,0 +1,45 @@
+{
+  "name": "Your Name",
+  "current_status": "One-line positioning statement — what you are, how long you have been doing it, and what you build.",
+  "based": "City, Country",
+  "summary": "Two or three sentences the assistant can paraphrase when someone asks who you are. Cover the kind of systems you design, the domains you have worked in, and the through-line across your roles. Write it in the third person — the assistant speaks about you, not as you.",
+  "strengths": [
+    "A capability you would be comfortable being interviewed on.",
+    "A second capability, phrased concretely rather than as a buzzword.",
+    "A third — include the scale or constraint that makes it credible.",
+    "A fourth.",
+    "A fifth.",
+    "A sixth."
+  ],
+  "tech_at_glance": [
+    "Python",
+    "TypeScript",
+    "Go",
+    "Java",
+    "PostgreSQL",
+    "GraphQL",
+    "AWS (Lambda, Step Functions, SQS, SNS, DynamoDB, API Gateway, SAM)",
+    "Kubernetes",
+    "Docker",
+    "Terraform"
+  ],
+  "services": [
+    "A kind of work you take on, described as an outcome rather than a job title.",
+    "A second kind of work, with the discipline or method you bring to it.",
+    "A third — name the domain where you are strongest.",
+    "A fourth.",
+    "A fifth."
+  ],
+  "engagement_targets": [
+    "The kind of full-time role you want, and the ownership level you need.",
+    "The kind of consulting or contract work you would take.",
+    "Project-shaped work you are open to: an MVP, a migration, a hardening pass."
+  ],
+  "speaking_points": [
+    "A story you want the assistant to be able to tell — a specific accomplishment, the constraint that made it hard, what you did, and the result. Four or five sentences, third person.",
+    "A second story, from a different role or domain, so the assistant is not repeating itself.",
+    "A third story covering a different dimension — leadership, a rescue, a decision you would defend.",
+    "A note on how you work: tooling, process, quality bar. This is where the assistant answers 'how does he approach X'."
+  ],
+  "contact_preference": "The contact form on this site is the preferred channel. Every submission is read."
+}

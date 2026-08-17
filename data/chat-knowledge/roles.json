@@ -1,0 +1,135 @@
+[
+  {
+    "id": "northwind-systems",
+    "company": "Northwind Systems",
+    "product": "Senior Engineer · Platform & Data",
+    "tenure": "20XX–Present",
+    "team": "Senior Engineer · Platform & Data",
+    "summary": "One sentence on what the company does and the scale you worked at.",
+    "highlights": [
+      "One sentence on what the company does and the scale you worked at.",
+      "One sentence on the hardest technical problem you solved, with the constraint that made it hard.",
+      "One sentence on a migration, rewrite, or platform change you led and how you de-risked it.",
+      "One sentence on an operational or cost result, with a number if you have one."
+    ],
+    "tech": [
+      "Java",
+      "Scala",
+      "Spark",
+      "Kubernetes",
+      "AWS Lambda",
+      "Terraform",
+      "Python"
+    ],
+    "relevance_tags": [
+      "aws",
+      "platform architecture",
+      "saas",
+      "data pipelines",
+      "spark",
+      "kubernetes"
+    ]
+  },
+  {
+    "id": "contoso-cloud",
+    "company": "Contoso Cloud",
+    "product": "Staff Engineer · APIs & Integrations",
+    "tenure": "20XX–20XX",
+    "team": "Staff Engineer · APIs & Integrations",
+    "summary": "One sentence on the product domain.",
+    "highlights": [
+      "One sentence on the product domain.",
+      "One sentence on an integration or API you owned end to end, including its scale.",
+      "One sentence on a data-modeling or schema decision and the tradeoff behind it."
+    ],
+    "tech": [
+      "Go",
+      "gRPC",
+      "Node.js",
+      "PostgreSQL",
+      "MongoDB",
+      "GraphQL",
+      "Docker"
+    ],
+    "relevance_tags": [
+      "platform architecture",
+      "saas",
+      "apis",
+      "graphql",
+      "kubernetes",
+      "mongodb"
+    ]
+  },
+  {
+    "id": "fabrikam-retail",
+    "company": "Fabrikam Retail",
+    "product": "Engineer · Commerce Platform",
+    "tenure": "20XX–20XX",
+    "team": "Engineer · Commerce Platform",
+    "summary": "One sentence on the product and its user base.",
+    "highlights": [
+      "One sentence on the product and its user base.",
+      "One sentence on the architectural evolution you drove and the discipline you applied to it.",
+      "One sentence on cross-team coordination and what it protected."
+    ],
+    "tech": [
+      "Ruby on Rails",
+      "React",
+      "AWS Lambda",
+      "API Gateway",
+      "SNS",
+      "SQS",
+      "DynamoDB",
+      "Docker"
+    ],
+    "relevance_tags": [
+      "subscriptions",
+      "saas",
+      "platform architecture",
+      "high-scale systems"
+    ]
+  },
+  {
+    "id": "globex-media",
+    "company": "Globex Media",
+    "product": "Full-stack Developer",
+    "tenure": "20XX–20XX",
+    "team": "Full-stack Developer",
+    "summary": "One sentence on a tool or feature you built that people actually used.",
+    "highlights": [
+      "One sentence on a tool or feature you built that people actually used."
+    ],
+    "tech": [
+      "JavaScript",
+      "PHP",
+      "MySQL"
+    ],
+    "relevance_tags": [
+      "frontend",
+      "backend",
+      "full-stack"
+    ]
+  },
+  {
+    "id": "initech",
+    "company": "Initech",
+    "product": "Infrastructure & Operations",
+    "tenure": "20XX–20XX",
+    "team": "Infrastructure & Operations",
+    "summary": "One sentence on the infrastructure you kept running and under what constraints.",
+    "highlights": [
+      "One sentence on the infrastructure you kept running and under what constraints."
+    ],
+    "tech": [
+      "Linux",
+      "Networking",
+      "Virtualization",
+      "IT operations"
+    ],
+    "relevance_tags": [
+      "infrastructure",
+      "operations",
+      "networks"
+    ]
+  }
+]

@@ -1,0 +1,100 @@
+{
+  "states": {
+    "idle": {
+      "messages": [
+        "Home: what I do. Portfolio: what I've shipped.",
+        "Labs: skills and experiments.",
+        "Production systems, end to end.",
+        "Placeholder tagline — set your own."
+      ],
+      "typingSpeed": 50,
+      "messageDelay": 9000
+    },
+    "playground": {
+      "messages": [
+        "Experiments on a smaller canvas.",
+        "Fast loops. Honest scope.",
+        "Click a card for details.",
+        "Production habits, smaller stakes."
+      ],
+      "typingSpeed": 40,
+      "messageDelay": 10000
+    },
+    "portfolio": {
+      "messages": [
+        "Roles and shipped work.",
+        "Northwind, Contoso, Fabrikam.",
+        "Click a card for details.",
+        "Systems owned end to end."
+      ],
+      "typingSpeed": 40,
+      "messageDelay": 10000
+    },
+    "home": {
+      "messages": [
+        "My services: architecture, platforms, cloud-native, AI.",
+        "Ask what I do, where I fit, what I've shipped.",
+        "Portfolio: shipped proof. Labs: experiments.",
+        "Grounded in my actual projects and services."
+      ],
+      "typingSpeed": 50,
+      "messageDelay": 9000
+    }
+  },
+  "reactions": {
+    "hover": "Hello.",
+    "click": "Got it.",
+    "longIdle": "Still here—standing by."
+  },
+  "themeMessages": {
+    "garden": {
+      "states": {
+        "idle": {
+          "messages": [
+            "Home: what I offer. Portfolio: what I've shipped.",
+            "Labs: skills and experiments.",
+            "Correctness over speed.",
+            "Placeholder tagline — set your own."
+          ],
+          "typingSpeed": 50,
+          "messageDelay": 9000
+        },
+        "playground": {
+          "messages": [
+            "Explorations and skills — smaller scope, real habits.",
+            "Fast loops. Clear constraints.",
+            "Click a card for details.",
+            "Side projects with production discipline."
+          ],
+          "typingSpeed": 40,
+          "messageDelay": 10000
+        },
+        "portfolio": {
+          "messages": [
+            "What I've done — roles and shipped outcomes.",
+            "Northwind, Contoso, Fabrikam.",
+            "Click a card for details.",
+            "Systems owned end-to-end."
+          ],
+          "typingSpeed": 40,
+          "messageDelay": 10000
+        },
+        "home": {
+          "messages": [
+            "Services and fit live here — ask what I provide.",
+            "Portfolio has shipped work; Labs has experiments.",
+            "Architecture, platforms, delivery.",
+            "The chat is grounded in this site — ask anything."
+          ],
+          "typingSpeed": 50,
+          "messageDelay": 9000
+        }
+      },
+      "reactions": {
+        "hover": "Hello.",
+        "click": "Got it.",
+        "longIdle": "Still here—standing by."
+      }
+    }
+  }
+}

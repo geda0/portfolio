@@ -1,0 +1,36 @@
+{
+  "summary": "One line on what you do. Architecture, platforms, and the kinds of systems you own.",
+  "skills": ["Software Architecture", "Distributed Systems", "Cloud Native", "Full-stack", "Data Platforms", "Testing", "Mentoring"],
+  "experience": [
+    { "role": "Senior Engineer · Platform & Data", "company": "Northwind Systems", "period": "20XX–Present", "tech": ["Java", "Scala", "Spark", "Kubernetes", "AWS Lambda", "Terraform", "Python"], "highlights": [
+      "One sentence on what the company does and the scale you worked at.",
+      "One sentence on the hardest technical problem you solved, with the constraint that made it hard.",
+      "One sentence on a migration, rewrite, or platform change you led and how you de-risked it.",
+      "One sentence on an operational or cost result, with a number if you have one."
+    ] },
+    { "role": "Staff Engineer · APIs & Integrations", "company": "Contoso Cloud", "period": "20XX–20XX", "tech": ["Go", "gRPC", "Node.js", "PostgreSQL", "MongoDB", "GraphQL", "Docker"], "highlights": [
+      "One sentence on the product domain.",
+      "One sentence on an integration or API you owned end to end, including its scale.",
+      "One sentence on a data-modeling or schema decision and the tradeoff behind it."
+    ] },
+    { "role": "Engineer · Commerce Platform", "company": "Fabrikam Retail", "period": "20XX–20XX", "tech": ["Ruby on Rails", "React", "AWS Lambda", "API Gateway", "SNS", "SQS", "DynamoDB", "Docker"], "highlights": [
+      "One sentence on the product and its user base.",
+      "One sentence on the architectural evolution you drove and the discipline you applied to it.",
+      "One sentence on cross-team coordination and what it protected."
+    ] },
+    { "role": "Full-stack Developer", "company": "Globex Media", "period": "20XX–20XX", "workVerb": "as a", "tech": ["JavaScript", "PHP", "MySQL"], "highlights": ["One sentence on a tool or feature you built that people actually used."] },
+    { "role": "Infrastructure & Operations", "company": "Initech", "period": "20XX–20XX", "tech": ["Linux", "Networking", "Virtualization", "IT operations"], "highlights": ["One sentence on the infrastructure you kept running and under what constraints."] }
+  ],
+  "education": [
+    { "degree": "Master's in Computer Science", "school": "Placeholder University", "focus": ["Machine Learning", "Distributed Systems", "Software Engineering"] }
+  ],
+  "projects": [
+    { "id": "sample-toolkit", "title": "Sample Toolkit", "blurb": "One-line blurb for the hero rotation.", "heroHint": "A short, punchy hint the character speaks when this card is in view." },
+    { "id": "sample-assistant", "title": "Sample AI Assistant", "blurb": "One-line blurb.", "heroHint": "Short hint shown alongside this card." },
+    { "id": "sample-hardware", "title": "Sample Hardware Project", "blurb": "One-line blurb.", "heroHint": "Short hint shown alongside this card." },
+    { "id": "northwind", "title": "Northwind Systems", "blurb": "One-line blurb for this role.", "heroHint": "Short hint shown alongside this role card.", "callout": "Optional longer aside the character can say about this role." },
+    { "id": "contoso", "title": "Contoso Cloud", "blurb": "One-line blurb for this role.", "heroHint": "Short hint shown alongside this role card." },
+    { "id": "fabrikam", "title": "Fabrikam Retail", "blurb": "One-line blurb for this role.", "heroHint": "Short hint shown alongside this role card." },
+    { "id": "placeholder-university", "title": "Master's in Computer Science", "blurb": "One-line blurb for the degree.", "heroHint": "Short hint shown alongside the education card." }
+  ]
+}

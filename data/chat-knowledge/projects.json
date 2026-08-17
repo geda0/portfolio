@@ -1,0 +1,178 @@
+[
+  {
+    "id": "sample-toolkit",
+    "name": "Sample Toolkit",
+    "summary": "Plain-prose summary of this project for the AI assistant. Unlike cardDescription (a hook) and description (HTML for the dialog), this field is what gets injected into the chat knowledge pack, so write it as continuous prose the model can quote from: what the project is, what problem it solves, the interesting technical decisions, and what it demonstrates about how you work. Two to five sentences is usually enough. Replace this placeholder with your own project.",
+    "why_it_matters": "One or two sentences on what this project proves about how you work — the habit or standard it demonstrates, not a repeat of the feature list.",
+    "tech": [
+      "Node.js",
+      "TypeScript",
+      "Testing",
+      "CI/CD"
+    ],
+    "links": [
+      {
+        "label": "Get in touch",
+        "url": "#contact"
+      }
+    ],
+    "relevance_tags": [
+      "node.js",
+      "playground",
+      "testing",
+      "platform architecture",
+      "typescript"
+    ]
+  },
+  {
+    "id": "sample-assistant",
+    "name": "Sample AI Assistant",
+    "summary": "Placeholder summary of a second project for the chat knowledge pack. Describe the streaming UX, the model routing, the persistence layer, or whatever the substance of your own project happens to be. The assistant answers from this text, so specifics beat adjectives.",
+    "why_it_matters": "One or two sentences framing this project for someone deciding whether to hire you.",
+    "tech": [
+      "Python",
+      "FastAPI",
+      "Streaming",
+      "Observability"
+    ],
+    "links": [
+      {
+        "label": "Get in touch",
+        "url": "#contact"
+      }
+    ],
+    "relevance_tags": [
+      "ai",
+      "this-site",
+      "platform architecture",
+      "python",
+      "aws",
+      "playground"
+    ]
+  },
+  {
+    "id": "sample-hardware",
+    "name": "Sample Hardware Project",
+    "summary": "A third card, for something off the beaten path — hardware, a game, a visualization, a weekend hack. Sample Hardware Project is a placeholder for a hobby build. Playground cards do not all need the same depth. A short, honest paragraph about something you enjoyed building is worth more than padded copy.",
+    "why_it_matters": "One or two sentences on why a hobby build still says something useful about your engineering.",
+    "tech": [
+      "Python",
+      "Raspberry Pi",
+      "Sensors"
+    ],
+    "links": [
+      {
+        "label": "Get in touch",
+        "url": "#contact"
+      }
+    ],
+    "relevance_tags": [
+      "python",
+      "embedded",
+      "hardware",
+      "playground"
+    ]
+  },
+  {
+    "id": "northwind",
+    "name": "Northwind Systems",
+    "summary": "Placeholder role card. One or two sentences on what this company does and what you owned there. Northwind Systems — placeholder for a professional role. The problem. What was broken, slow, expensive, or unscalable when you arrived. The work. The design you chose and why. Name the tradeoffs — a role card that only lists wins reads as marketing. The outcome. What changed for users, cost, or reliability, and how you knew.",
+    "why_it_matters": "One or two sentences on what this role demonstrates about your approach to platform work.",
+    "tech": [
+      "Java",
+      "Kubernetes",
+      "AWS",
+      "Spark",
+      "Terraform"
+    ],
+    "links": [
+      {
+        "label": "example.com",
+        "url": "https://example.com"
+      }
+    ],
+    "relevance_tags": [
+      "saas",
+      "data pipelines",
+      "platform architecture",
+      "aws",
+      "spark",
+      "kubernetes",
+      "java",
+      "serverless",
+      "portfolio"
+    ]
+  },
+  {
+    "id": "contoso",
+    "name": "Contoso Cloud",
+    "summary": "Placeholder role card for a second position. Contoso Cloud — placeholder for a professional role. Keep the same problem / work / outcome shape across roles so the section reads consistently.",
+    "why_it_matters": "One or two sentences on what this role demonstrates about API and data design.",
+    "tech": [
+      "Go",
+      "gRPC",
+      "GraphQL",
+      "PostgreSQL",
+      "MongoDB"
+    ],
+    "links": [
+      {
+        "label": "example.com",
+        "url": "https://example.com"
+      }
+    ],
+    "relevance_tags": [
+      "apis",
+      "graphql",
+      "saas",
+      "mongodb",
+      "portfolio"
+    ]
+  },
+  {
+    "id": "fabrikam",
+    "name": "Fabrikam Retail",
+    "summary": "Placeholder role card for a third position. Fabrikam Retail — placeholder for a professional role. Older roles can be shorter. Depth belongs on the work that still represents you.",
+    "why_it_matters": "One or two sentences on what this role demonstrates about scaling a product safely.",
+    "tech": [
+      "Ruby on Rails",
+      "React",
+      "AWS Lambda",
+      "DynamoDB"
+    ],
+    "links": [
+      {
+        "label": "example.com",
+        "url": "https://example.com"
+      }
+    ],
+    "relevance_tags": [
+      "subscriptions",
+      "saas",
+      "backend",
+      "aws",
+      "serverless",
+      "portfolio"
+    ]
+  },
+  {
+    "id": "placeholder-university",
+    "name": "Master's in Computer Science",
+    "summary": "Placeholder education card — the portfolio section can hold degrees and certifications alongside roles. Master's in Computer Science — Placeholder University. Focus areas, thesis, or capstone project go here. Delete this card if you would rather keep the section to work history only.",
+    "why_it_matters": "Demonstrates Your Name's practical approach to delivering reliable, maintainable systems.",
+    "tech": [
+      "Machine Learning",
+      "Distributed Systems",
+      "Algorithms"
+    ],
+    "links": [
+      {
+        "label": "example.com",
+        "url": "https://example.com"
+      }
+    ],
+    "relevance_tags": [
+      "portfolio"
+    ]
+  }
+]

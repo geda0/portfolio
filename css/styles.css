@@ -1,0 +1,2484 @@
+/* Design tokens — space (default): deep ink + blue nebula + warm red hints */
+:root,
+[data-theme="space"] {
+    --font-display: "Source Serif 4", Georgia, "Times New Roman", serif;
+    --font-body: "Source Sans 3", system-ui, -apple-system, sans-serif;
+    --font-mono: ui-monospace, "Cascadia Code", "Segoe UI Mono", monospace;
+
+    /* Calmer base: slightly warmer blue-gray ink, lifted off true black so the
+       page reads as dusk rather than void — easier on eyes and OLEDs. */
+    --space-deep: #141926;
+    --space-mid: #1c2334;
+    --bg-primary: var(--space-deep);
+    /* Keep in sync with SPACE_SCENE_GRADIENT in theme.js — mirrored horizontally
+       and dialed back: nebulas are atmospheric, not decorative. */
+    --bg-space-gradient:
+        radial-gradient(ellipse 100% 75% at 82% 6%, rgba(150, 130, 170, 0.03) 0%, transparent 50%),
+        radial-gradient(ellipse 95% 70% at 18% 90%, rgba(78, 110, 175, 0.075) 0%, transparent 52%),
+        radial-gradient(ellipse 120% 85% at 50% -5%, #222a40 0%, #1b2235 40%, #171d2c 65%, var(--space-deep) 100%);
+
+    /* Text contrast reduced — the brightest reading band sits well below pure
+       white so it never glares against the warm-dark base. */
+    --text-primary: #ccd2dd;
+    --text-muted: rgba(204, 210, 221, 0.68);
+    --text-muted-plus: rgba(204, 210, 221, 0.82);
+    --text-muted-extra: rgba(204, 210, 221, 0.56);
+    --text-subtle: rgba(204, 210, 221, 0.46);
+
+    --surface: rgba(165, 185, 230, 0.05);
+    --surface-elevated: rgba(28, 35, 52, 0.96);
+    --border-subtle: rgba(140, 165, 210, 0.12);
+    --border-strong: rgba(165, 188, 225, 0.2);
+
+    /* Softer periwinkle — desaturated so it sits beside the text rather than
+       jumping forward. */
+    --accent: #8197bd;
+    --accent-hover: #9badcb;
+    --on-accent: #141926;
+
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+
+    --shadow-sm: 0 1px 3px rgba(4, 6, 16, 0.35), 0 0 0 1px rgba(90, 130, 210, 0.035);
+    --shadow-md: 0 12px 32px rgba(4, 6, 18, 0.38), 0 0 40px rgba(70, 110, 200, 0.035);
+
+    --nav-bg: rgba(20, 25, 38, 0.9);
+    --nav-inner-bg: transparent;
+    --footer-bg: rgba(18, 23, 36, 0.95);
+    --navbar-bg: rgba(24, 30, 46, 0.82);
+    --navbar-link: #ccd2dd;
+    --navbar-link-hover-bg: transparent;
+    --navbar-link-hover-color: var(--accent-hover);
+    --link-color: #a0adc4;
+    --link-visited: #ada5c2;
+    --link-hover: var(--accent-hover);
+    --footer-link-color: var(--link-color);
+    --footer-link-visited: var(--link-visited);
+    --footer-link-hover: var(--accent-hover);
+    /* Overlay nebula on top of content — toned right down so it reads as a
+       quiet wash, not a colored corner light. */
+    --overlay-gradient:
+        radial-gradient(ellipse 80% 55% at 88% 18%, rgba(160, 140, 180, 0.028) 0%, transparent 55%),
+        radial-gradient(ellipse 85% 60% at 12% 72%, rgba(80, 120, 195, 0.055) 0%, transparent 58%),
+        radial-gradient(ellipse 105% 65% at 50% 6%, rgba(95, 130, 195, 0.045) 0%, transparent 60%);
+    --heading-shadow: 0 1px 0 rgba(255, 255, 255, 0.04);
+
+    /* Chat: cool blue chrome — kept neutral so it doesn't read warm against the dusk base. */
+    --chat-launcher-ring: var(--accent);
+    --chat-panel-bg: #1e2536;
+    --chat-launcher-glow-chrome: color-mix(in srgb, var(--accent) 48%, #b8c8f0 52%);
+    --chat-launcher-ring-mix: color-mix(in srgb, var(--chat-launcher-glow-chrome) 58%, var(--border-subtle));
+    --chat-launcher-glow-outer: color-mix(in srgb, var(--chat-launcher-glow-chrome) 22%, transparent);
+    --chat-launcher-glow-focus: color-mix(in srgb, var(--chat-launcher-glow-chrome) 28%, transparent);
+    --chat-launcher-dot-halo: color-mix(in srgb, var(--chat-launcher-glow-chrome) 34%, transparent);
+    --chat-launcher-glow-diffuse: color-mix(in srgb, var(--chat-launcher-glow-chrome) 28%, transparent);
+
+    /* Fixed site header: single compact row + optional notch */
+    --site-header-height: calc(2.65rem + env(safe-area-inset-top, 0px));
+    /* Fixed site footer: two compact lines (copyright + links) + bottom safe-area. */
+    /* Keep in sync with body > footer paddings + font sizes; body reserves matching padding-bottom. */
+    --site-footer-height: calc(4.5rem + env(safe-area-inset-bottom, 0px));
+    --home-hero-pad-bottom: clamp(1.2rem, 3.2vh, 1.85rem);
+}
+
+[data-theme="garden"] {
+    --bg-primary: linear-gradient(180deg, #7eb0c8 0%, #a8cfae 48%, #4d7a58 100%);
+    --text-primary: #0d1a12;
+    --text-muted: rgba(13, 26, 18, 0.76);
+    --text-subtle: rgba(13, 26, 18, 0.52);
+
+    --surface: rgba(255, 255, 255, 0.2);
+    --surface-elevated: rgba(252, 253, 250, 0.96);
+    --border-subtle: rgba(18, 48, 28, 0.14);
+    --border-strong: rgba(18, 48, 28, 0.24);
+
+    --accent: #1e5c3a;
+    --accent-hover: #2a7a52;
+    --on-accent: #f6faf7;
+
+    --nav-bg: rgba(42, 64, 50, 0.9);
+    --nav-inner-bg: transparent;
+    --footer-bg: rgba(32, 50, 40, 0.95);
+    --navbar-bg: rgba(42, 64, 50, 0.82);
+    --navbar-link: #f0f5f2;
+    --navbar-link-hover-bg: transparent;
+    --navbar-link-hover-color: var(--accent-hover);
+    --link-color: #1a4d32;
+    --link-visited: #256b45;
+    --link-hover: var(--accent-hover);
+    --footer-link-color: #c4e6d4;
+    --footer-link-visited: #aed6c4;
+    --footer-link-hover: #e4f4ea;
+    --overlay-gradient: radial-gradient(ellipse 85% 50% at 50% 12%, rgba(255, 252, 240, 0.45), transparent 60%);
+    --heading-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+
+    --chat-launcher-ring: var(--accent);
+    --chat-launcher-glow-chrome: color-mix(in srgb, var(--accent) 58%, #c5ddd0 42%);
+    --chat-launcher-ring-mix: color-mix(in srgb, var(--chat-launcher-glow-chrome) 52%, var(--border-subtle));
+    --chat-launcher-glow-outer: color-mix(in srgb, var(--chat-launcher-glow-chrome) 22%, transparent);
+    --chat-launcher-glow-focus: color-mix(in srgb, var(--chat-launcher-glow-chrome) 28%, transparent);
+    --chat-launcher-dot-halo: color-mix(in srgb, var(--chat-launcher-glow-chrome) 32%, transparent);
+    --chat-launcher-glow-diffuse: color-mix(in srgb, var(--chat-launcher-glow-chrome) 24%, transparent);
+}
+
+/* Garden scene: trees (only visible in garden theme) */
+.garden-scene {
+    opacity: 0;
+    visibility: hidden;
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    pointer-events: none;
+    transition: opacity 0.5s ease, visibility 0.5s ease;
+    /* Promote to compositor layer to reduce scroll jank on mobile */
+    transform: translateZ(0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+}
+
+[data-theme="garden"] .garden-scene {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Living theme: the garden scene fades in/out by the hour (set on :root by
+   theme.js) so the trees + ocean linger through dawn and dusk, not just midday. */
+html[data-time] .garden-scene {
+    visibility: visible;
+    opacity: var(--garden-opacity, 0);
+}
+
+/* Soft sun glow high in the sky (warms the gradient without competing with snow) */
+.garden-sun {
+    position: absolute;
+    top: 8%;
+    right: 14%;
+    width: 14vmin;
+    height: 14vmin;
+    max-width: 110px;
+    max-height: 110px;
+    background: radial-gradient(circle,
+        rgba(255, 245, 215, 0.85) 0%,
+        rgba(255, 235, 180, 0.55) 28%,
+        rgba(255, 220, 155, 0.18) 55%,
+        transparent 75%);
+    border-radius: 50%;
+    filter: blur(0.5px);
+    z-index: 0;
+    pointer-events: none;
+}
+
+/* Distant mountain silhouettes behind the trees — adds depth at the horizon */
+.garden-mountains {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: calc(18vh + 4vh - 1px);  /* sit just above the ocean band */
+    height: 12vh;
+    min-height: 60px;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.garden-mountain {
+    position: absolute;
+    bottom: 0;
+    left: -5%;
+    right: -5%;
+    height: 100%;
+    background-repeat: no-repeat;
+    background-position: bottom;
+    background-size: 100% 100%;
+}
+
+.garden-mountain--far {
+    opacity: 0.55;
+    /* Soft, distant blue-gray range */
+    background-image:
+        linear-gradient(180deg, transparent 40%, #6b7d8e 100%);
+    -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 200' preserveAspectRatio='none'><path d='M0 200 L0 130 L80 100 L180 140 L260 90 L360 130 L470 80 L560 120 L660 70 L770 110 L860 90 L970 140 L1080 100 L1200 130 L1200 200 Z' fill='black'/></svg>");
+            mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 200' preserveAspectRatio='none'><path d='M0 200 L0 130 L80 100 L180 140 L260 90 L360 130 L470 80 L560 120 L660 70 L770 110 L860 90 L970 140 L1080 100 L1200 130 L1200 200 Z' fill='black'/></svg>");
+    -webkit-mask-size: 100% 100%;
+            mask-size: 100% 100%;
+    -webkit-mask-repeat: no-repeat;
+            mask-repeat: no-repeat;
+}
+
+.garden-mountain--mid {
+    opacity: 0.78;
+    /* Closer, deeper range */
+    background-image:
+        linear-gradient(180deg, transparent 35%, #4a6168 100%);
+    -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 220' preserveAspectRatio='none'><path d='M0 220 L0 170 L120 130 L240 165 L370 110 L480 155 L600 120 L720 160 L860 115 L990 150 L1110 130 L1200 165 L1200 220 Z' fill='black'/></svg>");
+            mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 220' preserveAspectRatio='none'><path d='M0 220 L0 170 L120 130 L240 165 L370 110 L480 155 L600 120 L720 160 L860 115 L990 150 L1110 130 L1200 165 L1200 220 Z' fill='black'/></svg>");
+    -webkit-mask-size: 100% 100%;
+            mask-size: 100% 100%;
+    -webkit-mask-repeat: no-repeat;
+            mask-repeat: no-repeat;
+}
+
+/* Ocean on the horizon */
+.garden-ocean {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 18vh;
+    height: 4vh;
+    background: linear-gradient(180deg, #4a9bd9 0%, #2e75a8 40%, #1e547a 100%);
+    z-index: 0;
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Garden ground band */
+.garden-ground {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 18vh;
+    min-height: 100px;
+    background: linear-gradient(180deg, #5a8f5a 0%, #3d6b3d 40%, #2d5a2d 100%);
+    z-index: 1;
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Trees: trunk + foliage (column-reverse so trunk is at bottom, foliage on top) */
+.garden-scene .tree {
+    position: absolute;
+    bottom: 0;
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: center;
+    z-index: 2;
+}
+
+.garden-scene .tree-trunk {
+    width: 24px;
+    height: 22vh;
+    min-height: 55px;
+    max-height: 90px;
+    background: linear-gradient(90deg, #5d4037 0%, #6d4c41 50%, #4e342e 100%);
+    border-radius: 2px 2px 0 0;
+    box-shadow: inset 2px 0 4px rgba(0, 0, 0, 0.3), 2px 0 4px rgba(0, 0, 0, 0.2);
+}
+
+.garden-scene .tree-foliage {
+    width: 0;
+    height: 0;
+    border-style: solid;
+    margin-top: -2px;
+}
+
+.garden-scene .tree-left {
+    left: -2%;
+}
+
+.garden-scene .tree-left .tree-trunk {
+    width: 26px;
+    height: 24vh;
+    background: linear-gradient(90deg, #4e342e 0%, #5d4037 50%, #3e2723 100%);
+}
+
+.garden-scene .tree-left .tree-foliage {
+    border-width: 0 min(12vw, 90px) min(38vh, 260px) min(12vw, 90px);
+    border-color: transparent transparent #1e4d1e transparent;
+}
+
+.garden-scene .tree-right {
+    right: -2%;
+}
+
+.garden-scene .tree-right .tree-trunk {
+    width: 22px;
+    height: 20vh;
+    background: linear-gradient(90deg, #3e2723 0%, #6d4c41 50%, #5d4037 100%);
+}
+
+.garden-scene .tree-right .tree-foliage {
+    border-width: 0 min(11vw, 85px) min(34vh, 230px) min(11vw, 85px);
+    border-color: transparent transparent #2d5a2d transparent;
+}
+
+.garden-scene .tree-center {
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.garden-scene .tree-center .tree-trunk {
+    width: 20px;
+    height: 18vh;
+    background: linear-gradient(90deg, #5d4037 0%, #4e342e 100%);
+}
+
+.garden-scene .tree-center .tree-foliage {
+    border-width: 0 min(10vw, 70px) min(30vh, 200px) min(10vw, 70px);
+    border-color: transparent transparent #256b25 transparent;
+}
+
+body {
+    background-color: var(--bg-primary);
+    font-family: var(--font-body);
+    color: var(--text-primary);
+    margin: 0;
+    /* Reserve vertical space for the fixed footer so trailing content (e.g. the About
+       paragraph on the home page) is not occluded. */
+    padding: 0 0 var(--site-footer-height) 0;
+    transition: color 0.55s ease, background-color 0.55s ease;
+    font-size: 16px;
+    line-height: 1.6;
+}
+
+html:not([data-theme="garden"]) body {
+    background-color: var(--space-deep);
+    background-image: var(--bg-space-gradient);
+    background-attachment: fixed;
+}
+
+[data-theme="garden"] body {
+    background: var(--bg-primary);
+    background-color: transparent;
+    background-attachment: fixed;
+}
+
+/* Living time-of-day theme: the body shows the continuously-interpolated sky.
+   --time-sky is set inline on :root by theme.js (and the pre-paint script), so
+   it wins over the per-data-theme body backgrounds above. */
+html[data-time] body {
+    background: var(--time-sky) !important;
+    background-color: transparent;
+    background-attachment: fixed;
+}
+
+#light {
+    background-image: var(--overlay-gradient);
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    left: 0;
+    z-index: 0;
+    pointer-events: none;
+    will-change: transform, opacity;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    [data-theme="space"] #light {
+        animation: space-nebula-drift 38s ease-in-out infinite alternate;
+    }
+}
+
+@keyframes space-nebula-drift {
+    /* Very subtle parallax — the nebula should breathe, not move. */
+    0%   { opacity: 0.94; transform: translate3d(0, 0, 0) scale(1); }
+    100% { opacity: 1;    transform: translate3d(0.8%, -0.45%, 0) scale(1.015); }
+}
+
+/* Scene transition overlay */
+#sceneTransitionOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    opacity: 0;
+    pointer-events: none;
+    /* Keep in sync with SCENE_OVERLAY_* in theme.js */
+    transition: opacity 0.78s cubic-bezier(0.33, 0, 0.18, 1);
+}
+
+#sceneTransitionOverlay.transitioning {
+    pointer-events: auto;
+}
+
+/* Site chrome only — do not match <header>/<footer> inside dialogs (e.g. chat panel). */
+body > header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    background-color: var(--nav-bg);
+    border-bottom: 1px solid var(--border-subtle);
+    /* Avoid rare horizontal page scroll from slim chatbar + links */
+    overflow-x: hidden;
+    /* Below #spacemanContainer (1020) for paint order; mascot uses pointer-events so #agentNode / nav stay clickable. Below chat (1095) / project (1100). */
+    z-index: 1010;
+    transition: background-color 0.4s ease, border-color 0.4s ease;
+}
+
+html {
+    scroll-padding-top: var(--site-header-height);
+}
+
+main {
+    padding-top: var(--site-header-height);
+}
+
+nav ul {
+    display: flex;
+    justify-content: space-around;
+    list-style-type: none;
+    padding: 15px;
+    background-color: var(--nav-inner-bg);
+    transition: background-color 0.4s ease;
+}
+
+nav a {
+    color: var(--text-primary);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+nav a:hover {
+    color: var(--link-hover);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+section {
+    padding: 100px 50px;
+    text-align: center;
+    min-height: 100vh;
+    transition: transform 1s ease;
+}
+
+h1,
+h2,
+h3 {
+    margin-bottom: 30px;
+    text-shadow: var(--heading-shadow);
+    line-height: 1.25;
+    margin: 0 auto;
+    font-family: var(--font-display);
+    font-weight: 600;
+}
+
+.project {
+    margin: 20px auto;
+    background: var(--surface-elevated);
+    border: 1px solid var(--border-subtle);
+    padding: 1rem 1.1rem;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    max-width: 480px;
+    position: relative;
+    z-index: 101;
+    cursor: pointer;
+    text-align: left;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+    box-sizing: border-box;
+}
+
+/* Override global fixed img widths — card photos fill the padded card (symmetric, not left-hugging). */
+.project > img {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    margin: 0 0 0.35rem;
+    border-radius: var(--radius-md);
+    box-sizing: border-box;
+}
+
+.project:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+}
+
+.project__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin: 0.5rem 0 0.35rem;
+}
+
+.project h4 {
+    font-family: var(--font-body);
+    font-weight: 600;
+    margin: 0;
+    font-size: 1.05rem;
+    color: var(--text-primary);
+}
+
+.project__label {
+    flex-shrink: 0;
+    font-family: var(--font-body);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border-subtle));
+    border-radius: var(--radius-sm);
+    padding: 0.12rem 0.45rem;
+    line-height: 1.3;
+}
+
+.project p {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    line-height: 1.45;
+}
+
+.project p.project__role {
+    font-family: var(--font-body);
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: 0.01em;
+    margin: 0 0 0.6rem;
+}
+
+.project p.project__problem,
+.project p.project__work,
+.project p.project__outcome {
+    font-family: var(--font-body);
+    font-size: 0.88rem;
+    line-height: 1.5;
+    color: var(--text-muted);
+    margin: 0 0 0.5rem;
+}
+
+.project p.project__problem {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.project p.project__outcome {
+    color: var(--text-primary);
+    border-top: 1px solid var(--border-subtle);
+    padding-top: 0.55rem;
+    margin-top: 0.6rem;
+}
+
+.project__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin: 0.65rem 0 0;
+}
+
+.project__tag {
+    font-family: var(--font-body);
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    background: var(--surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    padding: 0.15rem 0.5rem;
+    white-space: nowrap;
+}
+
+[data-theme="garden"] .project__tag {
+    background: rgba(255, 255, 255, 0.42);
+}
+
+.projects-load-error {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    line-height: 1.5;
+    margin: 0.75rem 0 0;
+    max-width: 36rem;
+    font-family: var(--font-body);
+}
+
+.projects-load-error--site {
+    position: relative;
+    z-index: 102;
+    margin: 0.5rem auto 0;
+    padding: 0.65rem 1rem;
+    max-width: 42rem;
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    background: var(--surface-elevated);
+}
+
+.project:hover {
+    border-color: var(--border-strong);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .project:hover {
+        transform: none;
+    }
+}
+
+#portfolioContent .project {
+    background: var(--surface-elevated);
+}
+
+body.project-dialog-open {
+    overflow: hidden;
+}
+
+.project-dialog {
+    position: fixed;
+    inset: 0;
+    z-index: 1100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    box-sizing: border-box;
+}
+
+.project-dialog[hidden] {
+    display: none !important;
+}
+
+.project-dialog__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(10, 14, 24, 0.72);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    z-index: 0;
+}
+
+[data-theme="garden"] .project-dialog__backdrop {
+    background: rgba(6, 18, 10, 0.82);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+}
+
+.project-dialog__panel {
+    position: relative;
+    z-index: 1;
+    max-width: min(42rem, calc(100vw - 2rem));
+    width: 100%;
+    max-height: min(90vh, 44rem);
+    overflow: auto;
+    padding: 1.5rem 1.35rem 1.25rem;
+    padding-inline-end: 2.75rem;
+    border-radius: var(--radius-lg);
+    background: rgb(22, 28, 42);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-primary);
+    box-shadow: var(--shadow-md);
+    text-align: left;
+}
+
+[data-theme="garden"] .project-dialog__panel {
+    background: rgb(252, 253, 250);
+    box-shadow: var(--shadow-md);
+}
+
+.project-dialog__close {
+    position: absolute;
+    top: 0.4rem;
+    right: 0.5rem;
+    width: 2.25rem;
+    height: 2.25rem;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-primary);
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0.85;
+}
+
+.project-dialog__close:hover,
+.project-dialog__close:focus-visible {
+    opacity: 1;
+    background: var(--surface);
+}
+
+.project-dialog__close:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.project-dialog__media-wrap {
+    margin: 0 0 1rem;
+    border-radius: 14px;
+    overflow: hidden;
+    background: rgba(0, 0, 0, 0.22);
+}
+
+[data-theme="garden"] .project-dialog__media-wrap {
+    background: rgba(0, 0, 0, 0.16);
+}
+
+.project-dialog__image {
+    display: block;
+    width: 100%;
+    height: auto;
+    min-height: 12rem;
+    max-height: min(50vh, 22rem);
+    object-fit: contain;
+    object-position: center;
+}
+
+/* Reused <img>: hide until the new URL has painted (avoids flashing the previous project’s image). */
+.project-dialog__image.project-dialog__image--loading {
+    opacity: 0;
+    visibility: hidden;
+}
+
+.project-dialog__title {
+    margin: 0 0 0.75rem;
+    font-size: 1.35rem;
+    line-height: 1.25;
+    white-space: normal;
+    text-shadow: var(--heading-shadow);
+    font-family: var(--font-display);
+    font-weight: 600;
+}
+
+.project-dialog__description {
+    font-size: 0.95rem;
+    line-height: 1.6;
+    margin-bottom: 1rem;
+    color: var(--text-muted);
+    font-family: var(--font-body);
+}
+
+.project-dialog__description p {
+    margin: 0 0 1rem;
+}
+
+.project-dialog__description p:last-child {
+    margin-bottom: 0;
+}
+
+.project-dialog__description p strong:first-child {
+    display: block;
+    margin-bottom: 0.35rem;
+    color: var(--text-primary);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.project-dialog__description p:first-of-type strong:first-child {
+    font-size: 0.95rem;
+    text-transform: none;
+    letter-spacing: normal;
+}
+
+.project-dialog__description code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.86em;
+    padding: 0.1em 0.35em;
+    border-radius: 4px;
+    background: var(--surface-elevated);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-primary);
+    word-break: break-word;
+}
+
+.project-dialog__description ul {
+    margin: 0 0 1rem;
+    padding-left: 1.25rem;
+}
+
+.project-dialog__description li {
+    margin-bottom: 0.45rem;
+}
+
+.project-dialog__description li:last-child {
+    margin-bottom: 0;
+}
+
+.project-dialog__tech-wrap {
+    margin-bottom: 1.25rem;
+}
+
+.project-dialog__tech-heading {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 0.5rem;
+    opacity: 0.8;
+}
+
+.project-dialog__tech-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.project-dialog__chip {
+    display: inline-block;
+    padding: 0.2rem 0.55rem;
+    border-radius: 4px;
+    font-size: 0.74rem;
+    font-family: var(--font-mono);
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    background: var(--surface);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-primary);
+}
+
+[data-theme="garden"] .project-dialog__chip {
+    background: rgba(255, 255, 255, 0.35);
+    border-color: var(--border-subtle);
+}
+
+.project-dialog__actions {
+    margin-top: 0.25rem;
+}
+
+.project-dialog__link {
+    display: inline-block;
+    text-align: center;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .project-dialog__backdrop {
+        animation: project-dialog-fade-in 0.18s ease-out;
+    }
+
+    .project-dialog__panel {
+        animation: project-dialog-slide-in 0.22s ease-out;
+    }
+}
+
+@keyframes project-dialog-fade-in {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes project-dialog-slide-in {
+    from {
+        opacity: 0;
+        transform: translateY(6px) scale(0.995);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+body > footer {
+    background-color: var(--footer-bg);
+    color: var(--text-muted);
+    padding: 0.85rem 1rem 1rem;
+    text-align: center;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    z-index: 999;
+    transition: background-color 0.4s ease, color 0.4s ease;
+    border-top: 1px solid var(--border-subtle);
+    font-size: 0.88rem;
+}
+
+body > footer p {
+    margin: 0;
+}
+
+body > footer p:first-child {
+    font-size: 0.8rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    opacity: 0.85;
+}
+
+body > footer a {
+    color: var(--footer-link-color);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s ease;
+}
+
+body > footer a:visited {
+    color: var(--footer-link-visited);
+}
+
+body > footer a:hover {
+    color: var(--footer-link-hover);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+body > footer a:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 2px;
+}
+
+body > footer .footer-chat-open,
+body > footer .footer-contact-open {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    font-size: inherit;
+    font-weight: 500;
+    color: var(--footer-link-color);
+    cursor: pointer;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+body > footer .footer-link-spacing {
+    padding: 0 0.5rem;
+}
+
+body > footer .footer-chat-open:hover,
+body > footer .footer-contact-open:hover {
+    color: var(--footer-link-hover);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+body > footer .footer-chat-open:focus-visible,
+body > footer .footer-contact-open:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 2px;
+}
+
+.canvas-container {
+    top: 0;
+    left: 0;
+    min-height: 700px;
+    min-width: 500px;
+    overflow: auto;
+}
+
+#home {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+}
+
+/* #home is position:absolute — hiding only .hero left .experience-summary painting over portfolio/playground */
+body.content-open #home {
+    display: none;
+}
+
+a:visited {
+    color: var(--link-visited);
+}
+
+a {
+    color: var(--link-color);
+}
+
+img {
+    width: 299px;
+}
+
+#load {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex: 1 1 auto;
+    min-height: 0;
+    width: 100%;
+    position: relative;
+}
+
+body.content-open #load {
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+}
+
+canvas {
+    position: fixed;
+    z-index: -1;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+#contentWrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    min-height: 100vh;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Home vertical rhythm (replaces old whole-wrapper translateY slide) */
+body:not(.content-open) section#home {
+    padding-top: clamp(3rem, 12vh, 7.5rem);
+}
+
+/* Stacking: #spacemanContainer is z-index 1020 in spaceman.css (above this header) with pointer-events tuned so nav + #agentNode stay clickable. Hero tap styling: */
+#spacemanContainer,
+#spacemanContainer * {
+    -webkit-tap-highlight-color: transparent;
+    tap-highlight-color: transparent;
+}
+#spacemanContainer:focus:not(:focus-visible),
+#spacemanContainer *:focus:not(:focus-visible) {
+    outline: none;
+}
+
+#portfolioContent > .portfolio-intro {
+    margin-top: clamp(3rem, 10vh, 5rem);
+    text-align: center;
+}
+
+.portfolio-resume-link {
+    margin-top: 1rem;
+}
+
+.portfolio-resume-link a {
+    font-weight: 600;
+    color: var(--link-color);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.portfolio-resume-link a:hover {
+    color: var(--accent-hover);
+}
+
+#portfolioContent > .portfolio-intro + section#portfolioProjects {
+    margin-top: 2rem;
+}
+
+/* Demoted "about + résumé" footer — context BELOW the work, not the lead.
+   Quiet by design so the projects read first and the section stops feeling
+   like a résumé. */
+.portfolio-about {
+    margin-top: clamp(2.5rem, 7vh, 4rem);
+    padding-top: clamp(1.5rem, 4vh, 2rem);
+    border-top: 1px solid rgba(127, 127, 127, 0.22);
+    font-size: 0.92rem;
+    line-height: 1.6;
+    opacity: 0.72;
+}
+
+.portfolio-about .portfolio-resume-link a {
+    font-weight: 500;
+}
+
+/* Teaser link from the Portfolio page across to Labs. */
+.portfolio-labs-teaser {
+    margin-top: clamp(2rem, 6vh, 3rem);
+}
+
+.portfolio-labs-teaser a {
+    font-weight: 600;
+    color: var(--link-color);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.portfolio-labs-teaser a:hover {
+    color: var(--accent-hover);
+}
+
+#labsContent > .labs-intro {
+    margin-top: clamp(3rem, 10vh, 5rem);
+}
+
+#labsContent > .labs-intro + section#labsProjects {
+    margin-top: 2rem;
+}
+
+#portfolioContent,
+#labsContent {
+    z-index: 50;
+}
+
+.hidden {
+    opacity: 0;
+    display: none;
+}
+
+.visible {
+    opacity: 1;
+    visibility: visible;
+    height: auto;
+}
+
+/* Project sections: a responsive grid so cards fill the available width
+   instead of stacking in one narrow column with dead space on wide viewports.
+   The section-label header spans the full row; cards auto-fit below it. */
+section#labsProjects,
+section#portfolioProjects {
+    margin-top: 5rem;
+    padding-bottom: 60px;
+    position: relative;
+    z-index: 1;
+    transform-origin: center center;
+    transition: none;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+    align-content: start;
+    justify-content: center;
+    gap: 1.25rem;
+    width: 100%;
+    max-width: 1480px;
+    margin-left: auto;
+    margin-right: auto;
+    box-sizing: border-box;
+}
+
+section#labsProjects > .section-label,
+section#portfolioProjects > .section-label {
+    grid-column: 1 / -1;
+    margin-bottom: 0;
+}
+
+section#labsProjects > .projects-load-error,
+section#portfolioProjects > .projects-load-error {
+    grid-column: 1 / -1;
+}
+
+/* Cards stretch to fill their grid track; lone card stays comfortably capped. */
+section#labsProjects .project,
+section#portfolioProjects .project {
+    margin: 0;
+    max-width: 100%;
+    width: 100%;
+}
+
+/* Featured "first + larger" card on Labs: spans two grid tracks and is bigger
+   (title, image, padding) — emphasized but still within the grid rhythm. */
+section#labsProjects .project--featured {
+    grid-column: span 2;
+    padding: 1.6rem 1.75rem;
+}
+
+section#labsProjects .project--featured > img {
+    max-height: 320px;
+    object-fit: cover;
+}
+
+section#labsProjects .project--featured h4 {
+    font-size: 1.5rem;
+}
+
+section#labsProjects .project--featured p {
+    font-size: 0.98rem;
+}
+
+/* A single card should not stretch full-bleed — keep it centered and capped. */
+section#labsProjects:has(> .project:only-of-type),
+section#portfolioProjects:has(> .project:only-of-type) {
+    grid-template-columns: minmax(0, 48rem);
+}
+
+/* A lone featured card shouldn't fight the single-card centering rule. */
+section#labsProjects:has(> .project:only-of-type) .project--featured {
+    grid-column: auto;
+}
+
+@media (max-width: 767px) {
+    section#labsProjects,
+    section#portfolioProjects {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+        max-width: 100%;
+    }
+
+    /* On mobile the grid is single-column; the featured card stops spanning. */
+    section#labsProjects .project--featured {
+        grid-column: auto;
+        padding: 1.2rem 1.25rem;
+    }
+
+    section#labsProjects .project--featured h4 {
+        font-size: 1.25rem;
+    }
+}
+
+.section-label {
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-size: 0.72rem;
+    font-weight: 600;
+    font-family: var(--font-body);
+    color: var(--text-muted);
+    margin-bottom: 1.75rem;
+}
+
+@keyframes contentSectionBloom {
+    from {
+        opacity: 0;
+        transform: scale(0.97);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* `both` fill-mode: first keyframe applies on first paint so `.visible { opacity: 1 }` does not flash before the bloom */
+section#labsProjects.visible.content-section-reveal,
+section#portfolioProjects.visible.content-section-reveal {
+    animation: contentSectionBloom 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+    section#labsProjects.content-section-reveal,
+    section#portfolioProjects.content-section-reveal {
+        animation: none;
+        opacity: 1;
+        transform: none;
+    }
+}
+
+.section-invisible {
+    display: none;
+}
+
+.visually-hidden {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip-path: inset(50%) !important;
+    border: 0 !important;
+    white-space: nowrap !important;
+}
+
+
+/* Hero section */
+.hero {
+    max-width: min(1120px, calc(100vw - 2rem));
+    margin: 0 auto;
+    padding-top: 28px;
+    padding-bottom: var(--home-hero-pad-bottom, clamp(1.2rem, 3.2vh, 1.85rem));
+    text-align: center;
+    position: relative;
+    z-index: 10;
+}
+
+.hero-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+    align-items: stretch;
+    width: 100%;
+}
+
+.hero-copy-block {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.hero-chat {
+    max-width: 36rem;
+    width: 100%;
+    margin: 0.65rem auto 1.85rem;
+    padding-top: 0.85rem;
+    box-sizing: border-box;
+}
+
+.hero-chat__controls {
+    display: grid;
+    grid-template-columns: 1fr;
+    align-items: start;
+    gap: 1rem;
+    width: 100%;
+}
+
+.hero-chat__ask {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    min-width: 0;
+}
+
+.hero-chat__center {
+    display: none;
+}
+
+.hero-voice {
+    --hero-voice-mic-w: 4.75rem;
+    --hero-voice-mic-h: 4.75rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.hero-voice__mic {
+    position: relative;
+    width: var(--hero-voice-mic-w);
+    height: var(--hero-voice-mic-h);
+    border-radius: 50%;
+    border: 2px solid color-mix(in srgb, var(--chat-launcher-glow-chrome, #5da4ff) 72%, transparent);
+    background: radial-gradient(circle at 30% 30%,
+        color-mix(in srgb, var(--chat-launcher-glow-chrome, #5da4ff) 32%, transparent),
+        color-mix(in srgb, var(--chat-launcher-glow-chrome, #5da4ff) 10%, transparent) 72%);
+    color: var(--chat-launcher-glow-chrome, #5da4ff);
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    padding: 0;
+    transition: transform 180ms ease, background 220ms ease, box-shadow 260ms ease;
+}
+
+.hero-voice__mic:hover,
+.hero-voice__mic:focus-visible {
+    transform: scale(1.04);
+    background: radial-gradient(circle at 30% 30%,
+        color-mix(in srgb, var(--chat-launcher-glow-chrome, #5da4ff) 40%, transparent),
+        color-mix(in srgb, var(--chat-launcher-glow-chrome, #5da4ff) 14%, transparent) 72%);
+    box-shadow: 0 16px 36px -14px color-mix(in srgb, var(--chat-launcher-glow-chrome, #5da4ff) 50%, transparent);
+    outline: none;
+}
+
+.hero-voice__mic:active {
+    transform: scale(0.98);
+}
+
+.hero-voice__mic-icon {
+    position: relative;
+    z-index: 1;
+    display: block;
+}
+
+.hero-voice__halo {
+    position: absolute;
+    border-radius: 50%;
+    border: 1px solid currentColor;
+    pointer-events: none;
+    animation: portfolio-hero-voice-halo 2.6s ease-out infinite;
+}
+
+.hero-voice__halo--outer {
+    inset: -7px -5px;
+    opacity: 0.28;
+    animation-delay: 0s;
+}
+
+.hero-voice__halo--inner {
+    inset: -3px -2px;
+    opacity: 0.44;
+    animation-delay: 0.65s;
+}
+
+@keyframes portfolio-hero-voice-halo {
+    0%   { opacity: 0.55; transform: scale(1); }
+    100% { opacity: 0; transform: scale(1.38); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .hero-voice__halo {
+        animation: none;
+        opacity: 0.42;
+        transform: none;
+    }
+}
+
+.hero-voice__caption {
+    margin: 0;
+    font-family: var(--font-body);
+    font-size: 0.74rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+@media (min-width: 720px) {
+    .hero-chat {
+        max-width: min(40rem, 100%);
+        padding-top: 1rem;
+    }
+
+    .hero-chat__controls {
+        --hero-voice-mic-w: 4.75rem;
+        --hero-voice-mic-h: 4.75rem;
+        --hero-controls-rail-offset: calc(var(--hero-voice-mic-h) * 0.5);
+        grid-template-columns: minmax(0, 0.7fr) auto auto;
+        column-gap: 0.35rem;
+        row-gap: 0;
+        align-items: start;
+    }
+
+    .hero-chat__ask {
+        grid-column: 1;
+        grid-row: 1;
+    }
+
+    /* Narrow track: spaceman is fixed-positioned in the gap between bar and mic */
+    .hero-chat__center {
+        display: block;
+        grid-column: 2;
+        grid-row: 1;
+        align-self: start;
+        justify-self: center;
+        width: auto;
+        min-width: 0;
+        max-width: 3.5rem;
+        min-height: 0;
+        margin-top: 0;
+        padding: var(--hero-controls-rail-offset) 0 0;
+        pointer-events: none;
+    }
+
+    .hero-voice {
+        grid-column: 3;
+        grid-row: 1;
+        align-self: start;
+        margin-top: calc(var(--hero-voice-mic-h) * 0.3);
+        margin-inline-start: 0.1rem;
+    }
+
+    .hero-voice__mic {
+        width: var(--hero-voice-mic-w);
+        height: var(--hero-voice-mic-h);
+    }
+
+    .hero-voice__mic-icon {
+        width: 28px;
+        height: 32px;
+    }
+}
+
+@media (max-width: 719px) {
+    .hero-chat__controls {
+        gap: 0;
+    }
+
+    .hero-voice {
+        --hero-voice-mic-w: 4.75rem;
+        --hero-voice-mic-h: 4.75rem;
+        order: -1;
+        margin-bottom: calc(var(--hero-voice-mic-h) * 0.5);
+        padding-bottom: 0.65rem;
+        border-bottom: 1px solid color-mix(in srgb, var(--border-strong, rgba(255, 255, 255, 0.14)) 45%, transparent);
+        width: 100%;
+        max-width: 36rem;
+    }
+
+    .hero-chat__ask {
+        order: 0;
+    }
+
+    .hero-voice__mic {
+        width: var(--hero-voice-mic-w);
+        height: var(--hero-voice-mic-h);
+    }
+
+    .hero-voice__mic-icon {
+        width: 26px;
+        height: 30px;
+    }
+}
+
+/* Hide duplicate mic in label row when hero voice CTA is shown */
+.hero-chat:has(.hero-voice:not([hidden])) .hero-chat__label-wrap .agent-node__mic {
+    display: none !important;
+}
+
+.hero-chat:has(.hero-voice:not([hidden])) .agent-slot--hero .agent-node__form-icon {
+    display: block;
+}
+
+/* Source order wins: identity (name + tagline + CTAs) reads first, then the
+   launcher card. Previously this rule lifted `.hero-chat` above `.hero-copy`
+   on desktop via `order: -1`, which pushed the name below the fold. */
+
+.hero-copy {
+    width: 100%;
+}
+
+.hero-eyebrow {
+    font-family: var(--font-body);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin: 0 0 0.65rem;
+}
+
+.hero h1 {
+    font-size: 2em;
+    margin-bottom: 8px;
+    white-space: normal;
+    letter-spacing: -0.02em;
+}
+
+.hero-subtitle {
+    font-size: 1.05em;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+    font-weight: 600;
+    font-family: var(--font-body);
+}
+
+.hero-tagline {
+    font-size: 0.95em;
+    color: var(--text-subtle);
+    margin-bottom: 12px;
+    font-family: var(--font-body);
+    max-width: 36rem;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.hero-proof {
+    position: relative;
+    font-size: 0.85em;
+    color: var(--text-muted);
+    font-family: var(--font-body);
+    line-height: 1.45;
+    max-width: 38rem;
+    margin: 0 auto 0.35rem;
+    padding-top: 0.5rem;
+}
+
+.hero-proof::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 44px;
+    height: 2px;
+    border-radius: 1px;
+    background: var(--accent);
+}
+
+.hero-companies {
+    font-size: 0.8em;
+    color: var(--text-subtle);
+    font-family: var(--font-body);
+    margin: 0 auto 0.65rem;
+}
+
+.hero-companies__label {
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-size: 0.9em;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-right: 0.4rem;
+}
+
+.experience-summary {
+    max-width: 44rem;
+    margin: 0 auto;
+    padding: 0 1.25rem;
+    text-align: center;
+}
+
+.experience-summary__label {
+    margin-bottom: 0.7rem;
+}
+
+.experience-summary__lead {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.experience-summary p {
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: var(--text-muted);
+    margin: 0 0 0.5rem;
+}
+
+.experience-summary p:last-child {
+    margin-bottom: 0;
+}
+
+.cta-primary,
+.cta-secondary {
+    display: inline-block;
+    padding: 0.65rem 1.35rem;
+    border-radius: var(--radius-sm);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.92em;
+    font-family: var(--font-body);
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.cta-primary {
+    background: var(--accent);
+    color: var(--on-accent);
+    border: 1px solid transparent;
+    box-shadow: var(--shadow-sm);
+}
+
+.cta-primary:visited {
+    color: var(--on-accent);
+}
+
+.cta-primary:hover {
+    background: var(--accent-hover);
+    color: var(--on-accent);
+    box-shadow: var(--shadow-md);
+}
+
+.cta-secondary {
+    border: 1px solid var(--border-strong);
+    color: var(--text-primary);
+    background: transparent;
+}
+
+.cta-secondary:visited {
+    color: var(--text-primary);
+}
+
+.cta-secondary:hover {
+    background: var(--surface);
+    border-color: var(--accent);
+}
+
+.cta-primary:focus-visible,
+.cta-secondary:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.hero-highlights {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+@media (min-width: 1024px) {
+    .hero-layout {
+        display: block;
+        max-width: min(1180px, calc(100vw - 3rem));
+        margin: 0 auto;
+    }
+
+    .hero {
+        max-width: min(1180px, calc(100vw - 3rem));
+    }
+
+    .hero-copy-block {
+        text-align: center;
+    }
+
+    .hero-copy-block .hero-tagline {
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .hero-copy-block .hero-highlights {
+        justify-content: center;
+    }
+}
+
+/* Contact */
+body.contact-dialog-open {
+    overflow: hidden;
+}
+
+.contact-open-btn {
+    border: 1px solid var(--border-strong);
+    cursor: pointer;
+}
+
+.contact-dialog {
+    position: fixed;
+    inset: 0;
+    z-index: 1090;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    box-sizing: border-box;
+}
+
+.contact-dialog[hidden] {
+    display: none !important;
+}
+
+.contact-dialog__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(2, 4, 10, 0.92);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    z-index: 0;
+}
+
+[data-theme="garden"] .contact-dialog__backdrop {
+    background: rgba(6, 18, 10, 0.9);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+}
+
+.contact-dialog__panel {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: min(44rem, calc(100vw - 2rem));
+    max-height: min(90vh, 44rem);
+    overflow: auto;
+    padding: 1.3rem 1.25rem 1.1rem;
+    border-radius: var(--radius-lg);
+    background: var(--surface-elevated);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-primary);
+    box-shadow: var(--shadow-md);
+    text-align: left;
+    box-sizing: border-box;
+}
+
+.contact-dialog__panel .section-label {
+    margin-bottom: 0.75rem;
+}
+
+.contact-dialog__intro {
+    margin: -0.35rem 0 1rem;
+    font-size: 0.92rem;
+    line-height: 1.5;
+    color: var(--text-muted);
+    font-family: var(--font-body);
+}
+
+.portfolio-earlier-career {
+    max-width: 44rem;
+    margin: 0.75rem auto 0;
+    padding: 0 1.25rem 1.5rem;
+    text-align: center;
+    font-family: var(--font-body);
+    font-size: 0.82rem;
+    line-height: 1.45;
+    color: var(--text-subtle);
+}
+
+.contact-dialog__close {
+    position: absolute;
+    top: 0.4rem;
+    right: 0.5rem;
+    width: 2.25rem;
+    height: 2.25rem;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-primary);
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0.85;
+}
+
+.contact-dialog__close:hover,
+.contact-dialog__close:focus-visible {
+    opacity: 1;
+    background: var(--surface);
+}
+
+.contact-dialog__close:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.contact-form {
+    margin: 0;
+    text-align: left;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+.contact-form__row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.contact-form__field {
+    display: grid;
+    gap: 6px;
+    margin-bottom: 12px;
+    min-width: 0;
+}
+
+.contact-form__label {
+    font-family: var(--font-body);
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.contact-form input,
+.contact-form textarea {
+    width: 100%;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-subtle);
+    background: rgba(0, 0, 0, 0.14);
+    color: var(--text-primary);
+    padding: 0.7rem 0.8rem;
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    line-height: 1.35;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+    box-sizing: border-box;
+}
+
+[data-theme="garden"] .contact-form input,
+[data-theme="garden"] .contact-form textarea {
+    background: rgba(255, 255, 255, 0.45);
+}
+
+.contact-form textarea {
+    resize: vertical;
+    min-height: 140px;
+}
+
+.contact-form input:focus-visible,
+.contact-form textarea:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-color: var(--border-strong);
+}
+
+.contact-form__actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+}
+
+.contact-form__submit {
+    border: none;
+    cursor: pointer;
+}
+
+.contact-success {
+    margin-top: 0.5rem;
+}
+
+.contact-success__text {
+    margin: 0 0 0.85rem;
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    color: var(--text-primary);
+}
+
+.contact-success__actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.contact-form__secondary-action {
+    padding: 0.45rem 0.85rem;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+.contact-form__secondary-action[hidden] {
+    display: none !important;
+}
+
+.contact-form__status {
+    margin: 0;
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.contact-form__status[data-tone="success"] {
+    color: var(--text-primary);
+}
+
+.contact-form__status[data-tone="error"] {
+    color: #c94c4c;
+}
+
+[data-theme="garden"] .contact-form__status[data-tone="error"] {
+    color: #b63d3d;
+}
+
+.contact-form__hp {
+    position: absolute;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
+
+.highlight {
+    flex: 1;
+    min-width: 160px;
+    max-width: 200px;
+    padding: 1rem 1rem 1rem 1.1rem;
+    background: var(--surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    border-left: 3px solid var(--accent);
+    text-align: left;
+    box-shadow: var(--shadow-sm);
+}
+
+.highlight h4 {
+    margin-bottom: 6px;
+    font-size: 0.88em;
+    white-space: normal;
+    font-family: var(--font-body);
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--text-primary);
+}
+
+.highlight p {
+    font-size: 0.82em;
+    color: var(--text-muted);
+    margin: 0;
+    line-height: 1.45;
+    font-family: var(--font-body);
+}
+
+[data-theme="garden"] .highlight {
+    background: rgba(255, 255, 255, 0.42);
+    border-color: var(--border-subtle);
+}
+
+/* Garden theme: running text otherwise sits directly over the ocean stripe and tree
+   silhouettes, which kills contrast (most visible on mobile where the ocean band
+   crosses portfolio intro and labs intro). Give the prose blocks the same translucent panel
+   treatment as `.highlight` so the text reads cleanly without breaking the scene. */
+[data-theme="garden"] .experience-summary,
+[data-theme="garden"] .portfolio-earlier-career {
+    background: rgba(255, 255, 255, 0.42);
+    border: 1px solid var(--border-subtle);
+    border-radius: 0.85rem;
+    padding: 1.4rem 1.5rem;
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+}
+
+[data-theme="garden"] .portfolio-earlier-career {
+    margin-top: 1.5rem;
+    padding-bottom: 1.4rem;
+}
+
+/* Media queries for responsive design */
+@media (max-width: 767px) {
+    nav ul {
+        flex-direction: column;
+    }
+
+    section {
+        padding: 80px 25px;
+    }
+
+    section#home {
+        padding: 2.5rem 1rem 1rem;
+    }
+
+    h1,
+    h2:not(.section-label),
+    h3:not(.section-label) {
+        font-size: 24px;
+    }
+
+    .project {
+        max-width: 231px;
+    }
+
+    img {
+        width: 199px;
+    }
+
+    .hero {
+        padding-top: 10px;
+        padding-bottom: 2.4rem;
+    }
+
+    .hero h1 {
+        font-size: 1.8em;
+        order: 2;
+    }
+
+    .hero-copy {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .hero-eyebrow {
+        order: 1;
+    }
+
+    .hero-subtitle {
+        font-size: 0.95em;
+        order: 3;
+    }
+
+    .hero-tagline {
+        font-size: 0.85em;
+        margin-bottom: 14px;
+        order: 4;
+    }
+
+    .hero-proof {
+        order: 5;
+        margin-bottom: 0.35rem;
+        padding-top: 0.5rem;
+    }
+
+    .hero-companies {
+        order: 6;
+        margin-bottom: 0.55rem;
+    }
+
+    .hero-chat {
+        margin-bottom: 0.5rem;
+    }
+
+    .hero-highlights {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .highlight {
+        max-width: 260px;
+    }
+
+    .contact-form__row {
+        grid-template-columns: 1fr;
+    }
+
+    .contact-form__success-actions {
+        width: 100%;
+        margin-top: 6px;
+    }
+}
+
+@keyframes scaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0.985);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.scale-in {
+    animation: scaleIn 0.65s ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .scale-in {
+        animation: none;
+        opacity: 1;
+        transform: none;
+    }
+}
+
+.navbar {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.35rem;
+    background-color: var(--navbar-bg);
+    padding: 0.32rem 0.4rem;
+    position: relative;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+.navbar-left,
+.navbar-right {
+    display: flex;
+    align-items: center;
+    gap: 0.28rem;
+    margin: 0;
+    flex: 0 0 auto;
+}
+
+.navbar-center {
+    position: static;
+    transform: none;
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.navbar a {
+    color: var(--navbar-link);
+    text-decoration: none;
+    padding: 0.32rem 0.55rem;
+    font-weight: 500;
+    font-size: 0.86em;
+    border-radius: var(--radius-sm);
+    transition: color 0.2s ease, opacity 0.2s ease;
+}
+
+.navbar a:hover {
+    color: var(--navbar-link-hover-color);
+    text-decoration: underline;
+    text-underline-offset: 4px;
+    background-color: transparent;
+}
+
+.navbar a:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+}
+
+/* Theme switcher: trigger button shows the current theme's swatch; clicking
+   opens a dropdown menu with all four prefs. */
+.theme-switcher {
+    position: relative;
+    display: inline-flex;
+}
+
+/* Living time-of-day slider (replaces the old theme menu). A native range input
+   gives drag + keyboard + a11y for free; the track is a small day-arc preview. */
+.time-switcher {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.time-switcher__icon {
+    font-size: 0.92rem;
+    line-height: 1;
+    width: 1.15em;
+    text-align: center;
+}
+
+.time-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 96px;
+    height: 6px;
+    border-radius: 999px;
+    background: linear-gradient(90deg,
+        #141926 0%, #2a2150 22%, #e0a85a 29%, #7eb0c8 38%,
+        #86b8cf 50%, #7eb0c8 71%, #5b3358 79%, #1a1330 88%, #141926 100%);
+    border: 1px solid var(--border-subtle);
+    cursor: pointer;
+    outline-offset: 3px;
+    margin: 0;
+}
+
+.time-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #fff;
+    border: 2px solid #e8b070;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+    cursor: grab;
+}
+
+.time-slider::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #fff;
+    border: 2px solid #e8b070;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+    cursor: grab;
+}
+
+.time-slider:active::-webkit-slider-thumb {
+    cursor: grabbing;
+}
+
+.time-auto {
+    border: 1px solid var(--border-subtle);
+    background: transparent;
+    color: var(--navbar-link);
+    font-size: 0.68em;
+    font-weight: 500;
+    font-family: var(--font-body);
+    padding: 0.18rem 0.4rem;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    line-height: 1.2;
+    transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.time-auto[aria-pressed="true"] {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.time-auto:hover {
+    border-color: var(--border-strong);
+}
+
+/* ── Time-switcher responsive collapse ────────────────────────────────────────
+   On desktop (≥768px): trigger is hidden, panel is inline (existing layout).
+   On mobile (≤767px):  trigger is the compact icon button, panel is a popover.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+/* Compact trigger — hidden on desktop; shown on mobile */
+.time-trigger {
+    display: none; /* desktop: off */
+    align-items: center;
+    justify-content: center;
+    width: 1.8rem;
+    height: 1.8rem;
+    padding: 0;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--navbar-link);
+    font-size: 1rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.time-trigger:hover,
+.time-trigger:focus-visible {
+    border-color: var(--border-strong);
+    background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.time-trigger:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+}
+
+.time-trigger[aria-expanded="true"] {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+/* Panel: inline on desktop (default), popover on mobile */
+.time-panel {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+/* hidden attribute is authoritative in both desktop and mobile presentations */
+.time-panel[hidden] {
+    display: none;
+}
+
+/* ── Mobile: popover ─────────────────────────────────────────────────────── */
+@media (max-width: 767px) {
+    /* Show the compact trigger */
+    .time-trigger {
+        display: inline-flex;
+    }
+
+    /* Panel becomes a fixed popover (escapes header's overflow clipping) */
+    .time-panel {
+        position: fixed;
+        top: var(--time-panel-y, 3rem);
+        left: var(--time-panel-x, 1rem);
+        flex-direction: row;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.45rem 0.6rem;
+        background: var(--surface-elevated);
+        border: 1px solid var(--border-strong);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-md);
+        z-index: 1050;
+        animation: time-panel-in 0.14s ease-out;
+    }
+}
+
+@keyframes time-panel-in {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .time-panel {
+        animation: none;
+    }
+}
+
+.theme-toggle-icon--svg {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.1em;
+    height: 1.1em;
+    flex: 0 0 1.1em;
+}
+
+h1 {
+    font-size: 2em;
+}
+
+h2 {
+    font-size: 1.75em;
+}
+
+h3 {
+    font-size: 1.5em;
+}
+
+h4,
+h5,
+h6 {
+    font-family: var(--font-body);
+}
+
+h4 {
+    font-size: 1.25em;
+}
+
+h5 {
+    font-size: 1.1em;
+}
+
+h6 {
+    font-size: 0.9em;
+}
+
+.read-more {
+    font-size: 0.9em;
+}
+
+@media screen and (max-width: 767px) {
+    .navbar {
+        padding: 0.28rem 0.32rem;
+    }
+
+    /* Stabilize garden scene height so it doesn't resize when mobile URL bar hides/shows */
+    .garden-scene {
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: auto;
+        height: 100vh;
+        height: 100svh;
+        min-height: 100vh;
+        min-height: 100svh;
+    }
+
+    body {
+        font-size: 14px;
+        /* Footer link line can wrap on narrow phones; give it a bit more headroom. */
+        --site-footer-height: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+    }
+
+    h1 {
+        font-size: 1.8em;
+    }
+
+    h2 {
+        font-size: 1.6em;
+    }
+
+    h3 {
+        font-size: 1.4em;
+    }
+
+    h4 {
+        font-size: 1.2em;
+    }
+
+    h5 {
+        font-size: 1em;
+    }
+
+    h6 {
+        font-size: 0.8em;
+    }
+
+    .navbar a {
+        font-size: 0.76em;
+        padding: 6px 7px;
+    }
+
+    .navbar-left,
+    .navbar-right {
+        display: flex;
+        align-items: center;
+        margin: 0 0.22rem;
+        gap: 0.28rem;
+    }
+
+    .read-more {
+        font-size: 0.8em;
+    }
+}
+
+/* Per-section accent shifts.
+   Scoped to `main` so the chrome (nav, footer, chat launcher) keeps the base
+   theme accent — only in-content links / focus rings / read-more pick up the
+   portfolio variant. Subtle by design. Labs (the page formerly known as
+   playground) gets the same accent triad as portfolio. */
+[data-theme="space"] body[data-section="portfolio"] main {
+    --accent: #6a98e8;
+    --accent-hover: #82adf0;
+    --link-color: #b6cdf2;
+    --link-hover: var(--accent-hover);
+}
+
+[data-theme="garden"] body[data-section="portfolio"] main {
+    --accent: #144a2a;
+    --accent-hover: #1f6b3d;
+    --link-color: #103b22;
+    --link-hover: var(--accent-hover);
+}
+
+[data-theme="space"] body[data-section="labs"] main {
+    --accent: #6a98e8;
+    --accent-hover: #82adf0;
+    --link-color: #b6cdf2;
+    --link-hover: var(--accent-hover);
+}
+
+[data-theme="garden"] body[data-section="labs"] main {
+    --accent: #144a2a;
+    --accent-hover: #1f6b3d;
+    --link-color: #103b22;
+    --link-hover: var(--accent-hover);
+}
+

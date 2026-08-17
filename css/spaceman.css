@@ -1,0 +1,865 @@
+/* ===================================
+   AI SPACEMAN - CSS-First Animation
+   Theme-aware via CSS variables
+   =================================== */
+
+/* Space theme (default) */
+:root,
+[data-theme="space"] {
+  --spaceman-bubble-bg: rgba(252, 252, 253, 0.98);
+  --spaceman-bubble-text: #1a1f28;
+  --spaceman-bubble-shadow: 0 4px 20px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  --spaceman-cursor-color: var(--accent);
+  --spaceman-tail-dot-bg: rgba(255, 255, 255, 0.95);
+  --spaceman-helmet-bg: linear-gradient(145deg, #e8e8e8, #c4c4c4);
+  --spaceman-helmet-shadow: inset -5px -5px 15px rgba(0, 0, 0, 0.2), inset 5px 5px 15px rgba(255, 255, 255, 0.5), 0 5px 20px rgba(0, 0, 0, 0.3);
+  --spaceman-visor-bg: linear-gradient(135deg, #1a1a3e, #2d2d5e, #1a1a3e);
+  --spaceman-torso-bg: linear-gradient(180deg, #e0e0e0, #b8b8b8);
+  --spaceman-chest-panel-bg: #2a2a2a;
+  --spaceman-arm-bg: linear-gradient(90deg, #d0d0d0, #e0e0e0, #d0d0d0);
+  --spaceman-leg-bg: linear-gradient(180deg, #e0e0e0, #c8c8c8, #b0b0b0);
+  --spaceman-pack-bg: linear-gradient(180deg, #5a5a5a, #3a3a3a, #2a2a2a);
+  --spaceman-pack-nozzle-bg: linear-gradient(180deg, #4a4a4a, #2a2a2a);
+  --spaceman-flame-bg: linear-gradient(180deg, rgba(255, 200, 100, 1) 0%, #fbbf24 15%, #f97316 40%, #ef4444 65%, rgba(239, 68, 68, 0.5) 85%, transparent 100%);
+  --spaceman-flame-shadow: 0 0 8px #f97316, 0 0 15px #fbbf24, 0 0 25px rgba(251, 191, 36, 0.4);
+  --spaceman-legs-glow: drop-shadow(0 8px 12px rgba(251, 146, 60, 0.3));
+}
+
+[data-theme="garden"] {
+  --spaceman-bubble-bg: rgba(252, 253, 250, 0.97);
+  --spaceman-bubble-text: #142818;
+  --spaceman-bubble-shadow: 0 4px 18px rgba(20, 40, 28, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  --spaceman-cursor-color: var(--accent);
+  --spaceman-tail-dot-bg: rgba(255, 252, 240, 0.95);
+  /* Superman-style: head/hair, blue suit, red cape, yellow shield */
+  --spaceman-helmet-bg: linear-gradient(145deg, #2c2416, #1a1510);
+  --spaceman-helmet-shadow: inset -3px -3px 10px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.25);
+  --spaceman-visor-bg: linear-gradient(135deg, #1a1a2e, #2d2d4e, #1a1a2e);
+  --spaceman-torso-bg: linear-gradient(180deg, #1e3a8a, #1565c0, #0d47a1);
+  --spaceman-chest-panel-bg: linear-gradient(180deg, #fbbf24, #f59e0b);
+  --spaceman-arm-bg: linear-gradient(90deg, #1565c0, #1e3a8a, #1565c0);
+  --spaceman-leg-bg: linear-gradient(180deg, #1e3a8a 0%, #1565c0 55%, #b22222 55%, #dc2626 100%);
+  --spaceman-pack-bg: transparent;
+  --spaceman-pack-nozzle-bg: transparent;
+  --spaceman-flame-bg: transparent;
+  --spaceman-flame-shadow: none;
+  --spaceman-legs-glow: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+  --hero-cape-bg: linear-gradient(180deg, #b91c1c 0%, #dc2626 30%, #991b1b 100%);
+}
+
+/* Outer flex shell; limbs + torso paint inside `.spaceman-body` (120×200) like main. */
+.spaceman {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: float 6s ease-in-out infinite;
+  cursor: grab;
+  transition: transform 0.3s ease;
+}
+
+.spaceman:hover {
+  transform: scale(1.02);
+}
+
+.spaceman.boost {
+  animation: boost 0.6s ease-out;
+}
+
+.spaceman.chat-state-sending {
+  animation: chatSendNod 0.55s ease-out;
+}
+
+.spaceman.chat-state-thinking {
+  animation: chatThinkingFloat 1.15s ease-in-out infinite;
+}
+
+.spaceman.chat-state-streaming {
+  animation: chatStreamingBob 0.9s ease-in-out infinite;
+}
+
+.spaceman.chat-state-tool-call .chest-panel {
+  animation: chatToolPing 0.7s ease-in-out infinite;
+}
+
+.spaceman.chat-state-error {
+  animation: chatErrorSlump 0.45s ease-out forwards;
+}
+
+.spaceman.chat-state-thinking .bubble-dot,
+.spaceman.chat-state-streaming .bubble-dot {
+  animation: chatBubbleDotPulse 0.95s ease-in-out infinite;
+}
+
+.spaceman.chat-state-thinking .dot-2,
+.spaceman.chat-state-streaming .dot-2 {
+  animation-delay: 0.12s;
+}
+
+.spaceman.chat-state-thinking .dot-3,
+.spaceman.chat-state-streaming .dot-3 {
+  animation-delay: 0.24s;
+}
+
+/* ===== HERO CONTEXT MENU (Stay / Free + Chat) ===== */
+.spaceman-outer {
+  position: relative;
+  display: inline-block;
+}
+
+.spaceman-hero-menu {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 10px;
+  z-index: 100;
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: stretch;
+}
+
+/* Navbar dock: head sits high in the bar — open menu below so it stays readable */
+.spaceman-hero-menu.spaceman-hero-menu--below {
+  bottom: auto;
+  top: 100%;
+  margin-bottom: 0;
+  margin-top: 8px;
+}
+
+.spaceman-hero-menu[hidden] {
+  display: none !important;
+}
+
+.spaceman-hero-menu-btn {
+  display: block;
+  width: 100%;
+  padding: 10px 18px;
+  background: var(--spaceman-bubble-bg);
+  color: var(--spaceman-bubble-text);
+  border: none;
+  border-radius: 14px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: var(--spaceman-bubble-shadow);
+  white-space: nowrap;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+/* `display: block` above overrides UA [hidden]; force hidden Stay/Free buttons offstage */
+.spaceman-hero-menu-btn[hidden] {
+  display: none !important;
+}
+
+.spaceman-hero-menu-btn:hover {
+  transform: scale(1.03);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+}
+
+.spaceman-hero-menu-btn:active {
+  transform: scale(0.98);
+}
+
+/* ===== SPACEMAN BODY ===== */
+.spaceman-body {
+  position: relative;
+  width: 120px;
+  height: 200px;
+  margin-top: 10px;
+}
+
+.hero-stay-anchor {
+  display: none;
+  position: absolute;
+  right: 2px;
+  bottom: 6px;
+  z-index: 6;
+  font-size: 16px;
+  line-height: 1;
+  opacity: 0.9;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.45));
+  pointer-events: none;
+}
+
+.spaceman.hero-staying .hero-stay-anchor {
+  display: block;
+}
+
+[data-theme="garden"] .hero-stay-anchor {
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
+}
+
+/* Hero head (garden theme – bare head, hair, domino mask) */
+.hero-head {
+  display: none;
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 70px;
+  height: 70px;
+  z-index: 3;
+  pointer-events: none;
+}
+
+[data-theme="garden"] .hero-head {
+  display: block;
+}
+
+[data-theme="garden"] .helmet {
+  display: none;
+}
+
+.hero-face {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #e8c4a0 0%, #d4a574 40%, #c4956a 100%);
+  box-shadow: inset -3px -3px 8px rgba(0, 0, 0, 0.15), inset 3px 3px 8px rgba(255, 255, 255, 0.4), 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.hero-hair {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 50px;
+  height: 14px;
+  background: #1a1510;
+  border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+  clip-path: ellipse(80% 50% at 50% 40%);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  z-index: 0;
+}
+
+.hero-mask {
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 48px;
+  height: 20px;
+  background: linear-gradient(180deg, #1a1510 0%, #2c2416 100%);
+  border-radius: 50% 50% 45% 45%;
+  box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.1), 0 2px 4px rgba(0, 0, 0, 0.3);
+  z-index: 2;
+}
+
+.hero-eyes {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  position: absolute;
+  top: 22px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+}
+
+.hero-eyes .eye {
+  width: 8px;
+  height: 8px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+  animation: eyeGlow 2s ease-in-out infinite alternate;
+}
+
+.helmet {
+  width: 75px;
+  height: 75px;
+  background: var(--spaceman-helmet-bg);
+  border-radius: 50%;
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  box-shadow: var(--spaceman-helmet-shadow);
+  overflow: hidden;
+  z-index: 3;
+}
+
+.visor {
+  width: 56px;
+  height: 42px;
+  background: var(--spaceman-visor-bg);
+  border-radius: 28px 28px 23px 23px;
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  overflow: hidden;
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5);
+}
+
+.visor-reflection {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  width: 19px;
+  height: 9px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.4), transparent);
+  border-radius: 50%;
+}
+
+.eyes {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.eye {
+  width: 8px;
+  height: 8px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+  animation: eyeGlow 2s ease-in-out infinite alternate;
+}
+
+.torso {
+  width: 54px;
+  height: 52px;
+  background: var(--spaceman-torso-bg);
+  border-radius: 14px 14px 18px 18px;
+  position: absolute;
+  top: 69px;
+  left: 50%;
+  transform: translateX(-50%);
+  box-shadow:
+    inset -3px 0 10px rgba(0, 0, 0, 0.1),
+    0 5px 15px rgba(0, 0, 0, 0.2);
+  z-index: 2;
+}
+
+[data-theme="garden"] .torso {
+  width: 48px;
+  height: 50px;
+  top: 68px;
+  border-radius: 12px 12px 16px 16px;
+}
+
+.chest-panel {
+  width: 28px;
+  height: 19px;
+  background: var(--spaceman-chest-panel-bg);
+  border-radius: 5px;
+  position: absolute;
+  top: 15px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  padding-top: 5px;
+}
+
+.light {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.light-1 {
+  background: #4ade80;
+  box-shadow: 0 0 8px #4ade80;
+  animation: lightPulse 1s ease-in-out infinite;
+}
+
+.light-2 {
+  background: #60a5fa;
+  box-shadow: 0 0 8px #60a5fa;
+  animation: lightPulse 1.5s ease-in-out infinite 0.5s;
+}
+
+[data-theme="garden"] .chest-panel {
+  width: 28px;
+  height: 22px;
+  border-radius: 50% 50% 45% 45%;
+  border: 2px solid #b45309;
+  box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.4), 0 2px 6px rgba(0, 0, 0, 0.2);
+  top: 12px;
+}
+
+[data-theme="garden"] .chest-panel .light {
+  width: 4px;
+  height: 4px;
+  background: #1a1a2e;
+  box-shadow: none;
+  animation: none;
+}
+
+.arm {
+  width: 26px;
+  height: 13px;
+  background: var(--spaceman-arm-bg);
+  border-radius: 6px;
+  position: absolute;
+  top: 84px;
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.2),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.1);
+  z-index: 1;
+}
+
+[data-theme="garden"] .arm {
+  width: 22px;
+  height: 12px;
+  top: 82px;
+  border-radius: 5px;
+}
+
+.left-arm {
+  left: 5px;
+  transform: rotate(-5deg);
+  transform-origin: right center;
+  animation: leftArmFloat 6s ease-in-out infinite;
+}
+
+.right-arm {
+  right: 5px;
+  transform: rotate(5deg);
+  transform-origin: left center;
+  animation: rightArmFloat 6s ease-in-out infinite;
+}
+
+/* ===== JETPACK WITH FLAMES (BEHIND BODY) ===== */
+
+.jetpack {
+  position: absolute;
+  top: 74px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 0;
+}
+
+.pack {
+  width: 37px;
+  height: 47px;
+  background: var(--spaceman-pack-bg);
+  border-radius: 8px 8px 5px 5px;
+  box-shadow: 
+    inset 2px 0 4px rgba(255, 255, 255, 0.1),
+    0 5px 15px rgba(0, 0, 0, 0.4);
+  position: relative;
+}
+
+/* Jetpack nozzles */
+.pack::before,
+.pack::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  width: 11px;
+  height: 10px;
+  background: var(--spaceman-pack-nozzle-bg);
+  border-radius: 2px 2px 4px 4px;
+}
+
+.pack::before {
+  left: 5px;
+}
+
+.pack::after {
+  right: 5px;
+}
+
+.flames-container {
+  position: absolute;
+  top: 49px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 15px;
+  z-index: -1;
+}
+
+.flame {
+  width: 15px;
+  height: 48px;
+  position: relative;
+}
+
+.flame-inner {
+  width: 100%;
+  height: 100%;
+  background: var(--spaceman-flame-bg);
+  border-radius: 50% 50% 50% 50% / 20% 20% 80% 80%;
+  animation: flameFlicker 0.12s ease-in-out infinite alternate;
+  filter: blur(0.5px);
+  box-shadow: var(--spaceman-flame-shadow);
+}
+
+/* ===== HERO CAPE (garden theme – replaces thrust/jetpack) ===== */
+.hero-cape {
+  display: none;
+  position: absolute;
+  top: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80px;
+  height: 140px;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.hero-cape .cape-cloth {
+  width: 100%;
+  height: 100%;
+  background: var(--hero-cape-bg, linear-gradient(180deg, #b91c1c, #991b1b));
+  border-radius: 0 0 50% 50% / 0 0 30% 30%;
+  box-shadow:
+    inset -10px 0 20px rgba(0, 0, 0, 0.2),
+    4px 8px 16px rgba(0, 0, 0, 0.25);
+  transform-origin: top center;
+}
+
+[data-theme="garden"] .hero-cape {
+  display: block;
+  width: 55px;
+  height: 100px;
+  top: 66px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+[data-theme="garden"] .hero-cape .cape-cloth {
+  background: var(--hero-cape-bg);
+  animation: capeFlow 4s ease-in-out infinite;
+}
+
+[data-theme="garden"] .jetpack .pack,
+[data-theme="garden"] .jetpack .flames-container {
+  display: none !important;
+}
+
+[data-theme="garden"] .spaceman.boost .hero-cape .cape-cloth {
+  animation: capeBoost 0.6s ease-out;
+}
+
+@keyframes capeFlow {
+  0%, 100% { transform: scaleY(1) skewX(1deg); }
+  50% { transform: scaleY(1.01) skewX(-1.5deg); }
+}
+
+@keyframes capeBoost {
+  0% { transform: scaleY(1) scaleX(1); }
+  40% { transform: scaleY(1.25) scaleX(1.1); }
+  100% { transform: scaleY(1) scaleX(1); }
+}
+
+.legs {
+  position: absolute;
+  top: 122px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  z-index: 2;
+  filter: var(--spaceman-legs-glow);
+}
+
+.leg {
+  width: 16px;
+  height: 44px;
+  background: var(--spaceman-leg-bg);
+  border-radius: 7px 7px 11px 11px;
+  box-shadow:
+    inset -2px 0 4px rgba(0, 0, 0, 0.1),
+    0 3px 6px rgba(0, 0, 0, 0.2);
+}
+
+[data-theme="garden"] .leg {
+  width: 14px;
+  height: 42px;
+  border-radius: 6px 6px 10px 10px;
+}
+
+[data-theme="garden"] .legs {
+  top: 118px;
+}
+
+.left-leg {
+  transform: rotate(-4deg);
+  transform-origin: top center;
+  animation: leftLegFloat 6s ease-in-out infinite;
+}
+
+.right-leg {
+  transform: rotate(4deg);
+  transform-origin: top center;
+  animation: rightLegFloat 6s ease-in-out infinite;
+}
+
+/* ===== ANIMATIONS ===== */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+@keyframes boost {
+  0% { transform: translateY(0) scale(1); }
+  30% { transform: translateY(-12px) scale(1.02); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+@keyframes chatSendNod {
+  0% { transform: translateY(0) rotate(0deg); }
+  45% { transform: translateY(1px) rotate(4deg); }
+  100% { transform: translateY(0) rotate(0deg); }
+}
+
+@keyframes chatThinkingFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+@keyframes chatStreamingBob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+
+@keyframes chatToolPing {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+
+@keyframes chatBubbleDotPulse {
+  0%, 100% { opacity: 0.45; transform: scale(0.95); }
+  50% { opacity: 1; transform: scale(1.08); }
+}
+
+@keyframes chatErrorSlump {
+  0% { transform: translateY(0) rotate(0deg); }
+  100% { transform: translateY(3px) rotate(-5deg); }
+}
+
+@keyframes eyeGlow {
+  0% { box-shadow: 0 0 5px rgba(255, 255, 255, 0.5); }
+  100% { box-shadow: 0 0 15px rgba(255, 255, 255, 1); }
+}
+
+@keyframes lightPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
+}
+
+@keyframes leftArmFloat {
+  0%, 100% { transform: rotate(-5deg); }
+  50% { transform: rotate(-10deg); }
+}
+
+@keyframes rightArmFloat {
+  0%, 100% { transform: rotate(5deg); }
+  50% { transform: rotate(10deg); }
+}
+
+@keyframes leftLegFloat {
+  0%, 100% { transform: rotate(-4deg); }
+  50% { transform: rotate(-2deg); }
+}
+
+@keyframes rightLegFloat {
+  0%, 100% { transform: rotate(4deg); }
+  50% { transform: rotate(2deg); }
+}
+
+@keyframes flameFlicker {
+  0% { 
+    transform: scaleY(1) scaleX(1);
+    opacity: 0.95;
+  }
+  100% { 
+    transform: scaleY(1.15) scaleX(0.9);
+    opacity: 1;
+  }
+}
+
+/* State change animation */
+.spaceman.state-change {
+  animation: stateChange 0.5s ease-out;
+}
+
+@keyframes stateChange {
+  0% { transform: scale(1) rotate(0deg); }
+  25% { transform: scale(1.05) rotate(-2deg); }
+  75% { transform: scale(1.05) rotate(2deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+
+/* Boost animation - bigger flames */
+.spaceman.boost .flame {
+  height: 68px;
+}
+
+.spaceman.boost .flame-inner {
+  animation: flameBoost 0.1s ease-in-out infinite alternate;
+}
+
+@keyframes flameBoost {
+  0% { transform: scaleY(1.2) scaleX(1.1); }
+  100% { transform: scaleY(1.5) scaleX(0.95); }
+}
+
+/* ===== RESTORED ANIMATIONS ===== */
+
+/* Blink */
+.eye.blink {
+  animation: blinkEye 0.15s ease-in-out;
+}
+
+@keyframes blinkEye {
+  0%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(0.1); }
+}
+
+/* Wave */
+.spaceman.wave .right-arm {
+  animation: waveHello 0.5s ease-in-out 3;
+  transform-origin: left center;
+}
+
+@keyframes waveHello {
+  0%, 100% { transform: rotate(10deg); }
+  50% { transform: rotate(-45deg); }
+}
+
+/* ===== SPACEMAN POSITIONING & MOVEMENT ===== */
+
+/* Above fixed site header (styles.css body > header z-index: 1010) so the mascot paints over the bar when docked; below chat (1040) / project (1100). Hit-testing: container + .spaceman-outer use pointer-events: none; .spaceman and .spaceman-hero-menu use auto so clicks pass through chrome gaps to #agentNode / nav. */
+#spacemanContainer {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%)
+             translate(var(--sx, 0px), var(--sy, 0px))
+             scale(var(--ss, 1));
+  transform-origin: center center;
+  z-index: 1020;
+  pointer-events: none;
+  transition: transform 0.5s ease-out;
+  will-change: transform;
+}
+
+#spacemanContainer > .spaceman-outer {
+  pointer-events: none;
+}
+
+#spacemanContainer .spaceman {
+  pointer-events: auto;
+  /* Let pointer drag work on touch: default touch-action pans the page instead of firing pointermove */
+  touch-action: none;
+}
+
+/* Disable transition during drag */
+#spacemanContainer.dragging {
+  transition: none !important;
+}
+
+.spaceman.dragging-active {
+  cursor: grabbing;
+}
+
+/* Movement state - boost flames */
+.spaceman.thrust .flame {
+  height: 58px;
+}
+
+.spaceman.thrust .flame-inner {
+  animation: thrustFlame 0.1s ease-in-out infinite alternate;
+}
+
+@keyframes thrustFlame {
+  0% { transform: scaleY(1.3) scaleX(1); }
+  100% { transform: scaleY(1.6) scaleX(0.85); }
+}
+
+/* Moving state - slight tilt */
+.spaceman.moving {
+  animation: moveTilt 0.5s ease-out;
+}
+
+@keyframes moveTilt {
+  0% { filter: none; }
+  50% { filter: drop-shadow(0 0 20px rgba(251, 146, 60, 0.5)); }
+  100% { filter: none; }
+}
+
+/* ===== Z-INDEX MANAGEMENT ===== */
+
+body.content-open #spacemanContainer {
+  z-index: 1020;
+  transition: transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Project / contact modals: keep mascot *under* dialog stacking (project 1100, contact 1090) so
+   close button, backdrop, and panel receive clicks. #spacemanContainer > .spaceman-outer is none; .spaceman and .spaceman-hero-menu stay auto. */
+body.project-dialog-open #spacemanContainer,
+body.contact-dialog-open:not(.chat-dialog-open) #spacemanContainer {
+  z-index: 1080;
+  transition: transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Chat overlay covers the hero — keep mascot under the panel so bubbles never paint on messages */
+body.chat-dialog-open #spacemanContainer {
+  z-index: 1040;
+  transition: transform var(--portfolio-chat-panel-anim-ms, 280ms) var(--portfolio-chat-panel-anim-ease, cubic-bezier(0.22, 1, 0.36, 1));
+}
+
+/* ===== RESPONSIVE SCALING ===== */
+
+@media (max-width: 767px) {
+  .spaceman {
+    animation: floatMobile 6s ease-in-out infinite;
+  }
+}
+
+@keyframes floatMobile {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+/* Touch devices - disable hover effects */
+@media (hover: none) {
+  .spaceman:hover {
+    transform: none;
+  }
+
+  .spaceman:active {
+    transform: scale(0.95);
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .spaceman,
+  .eye,
+  .arm,
+  .leg,
+  .flame-inner,
+  .bubble-dot,
+  .chest-panel,
+  .hero-cape .cape-cloth,
+  #spacemanContainer {
+    animation: none !important;
+  }
+
+  #spacemanContainer {
+    transition: transform 0.1s ease-out;
+  }
+
+  body.content-open #spacemanContainer {
+    transition: transform 0.12s ease-out;
+  }
+
+  body.project-dialog-open #spacemanContainer,
+  body.chat-dialog-open #spacemanContainer,
+  body.contact-dialog-open #spacemanContainer {
+    transition: transform 0.12s ease-out;
+  }
+}

@@ -18,7 +18,7 @@ const DEFAULTS = {
     chat: 'https://efgh789012.execute-api.us-east-2.amazonaws.com/api/chat',
   },
   stage: {
-    contact: 'https://fvfqpef8kb.execute-api.us-east-2.amazonaws.com/api/contact',
+    contact: 'https://ijkl345678.execute-api.us-east-2.amazonaws.com/api/contact',
     chat:
       process.env.PORTFOLIO_CHAT_API_URL_STAGE ||
       'https://efgh789012.execute-api.us-east-2.amazonaws.com/api/chat',

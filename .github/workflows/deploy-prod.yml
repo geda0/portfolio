@@ -40,7 +40,7 @@ jobs:
           node-version: '22'
 
       - name: Guard — main ships PROD (not staging) API URLs
-        # Fail fast and loudly if a staging host (fvfqpef8kb / chat-api-stage) ever rides
+        # Fail fast and loudly if a staging host (ijkl345678 / chat-api-stage) ever rides
         # onto main again (the 2026-06-04 agent->main fast-forward incident, hotfixed in
         # 843e648). Amplify serves the committed HTML as-is, so a leaked staging meta would
         # publish staging backends to prod. The generic `node --test` step below also enforces

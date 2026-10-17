@@ -209,7 +209,7 @@ proves it comes FIRST.
     diverge ONLY on the `portfolio:*-api-url` metas.** The committed `index.html` / `admin/index.html`
     on `main` carry the PROD hosts (`abcd123456.execute-api…` contact +
     `chat-api.example.com` chat) and NEVER a staging host; on `agent` the inverse
-    (`fvfqpef8kb.execute-api…` contact + `chat-api-stage.example.com` chat). Amplify serves
+    (`ijkl345678.execute-api…` contact + `chat-api-stage.example.com` chat). Amplify serves
     the committed HTML as-is (there is no `amplify.yml`) and the deploy workflows run
     `SYNC_API_URLS=0`, so the committed meta value is load-bearing — a staging host on `main`
     publishes the staging backends to production (the 2026-06-04 `agent`→`main` fast-forward

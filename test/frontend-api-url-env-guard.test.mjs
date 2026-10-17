@@ -12,7 +12,7 @@ import { join } from 'node:path'
 // `index.html` and `admin/index.html` legitimately DIVERGE between the two branches ONLY
 // on the `portfolio:*-api-url` meta tags:
 //   main  (prod,    www.example.com)  -> abcd123456.execute-api… + <express-prod>.ecs.us-east-2.on.aws
-//   agent (staging, chat.example.com) -> fvfqpef8kb.execute-api… + <express-stage>.ecs.us-east-2.on.aws
+//   agent (staging, chat.example.com) -> ijkl345678.execute-api… + <express-stage>.ecs.us-east-2.on.aws
 //
 // This guard pins that divergence: on `main` the shipped HTML MUST carry the prod hosts and
 // MUST NOT carry any staging host; on `agent` the inverse. It is environment-gated so it never
@@ -34,7 +34,7 @@ const ENV_HOSTS = {
     chat: 'example-chat-host.ecs.us-east-2.on.aws'
   },
   stage: {
-    contact: 'fvfqpef8kb.execute-api.us-east-2.amazonaws.com',
+    contact: 'ijkl345678.execute-api.us-east-2.amazonaws.com',
     // ADR-0007 Phase 3: staging chat is hosted on ECS Express Mode (AWS's managed successor
     // to App Runner, which entered maintenance mode 2026-04-30). Browser-direct voice means
     // no WS to host, so the ECS-managed *.ecs.<region>.on.aws URL + TLS is all staging needs.

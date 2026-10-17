@@ -27,7 +27,10 @@
       "saas",
       "data pipelines",
       "spark",
-      "kubernetes"
+      "kubernetes",
+      "data systems",
+      "query systems",
+      "finops"
     ]
   },
   {
@@ -43,7 +46,7 @@
       "One sentence on a data-modeling or schema decision and the tradeoff behind it."
     ],
     "tech": [
-      "Go",
+      "Golang",
       "gRPC",
       "Node.js",
       "PostgreSQL",
@@ -57,7 +60,10 @@
       "apis",
       "graphql",
       "kubernetes",
-      "mongodb"
+      "mongodb",
+      "security",
+      "identity",
+      "cloud"
     ]
   },
   {
@@ -107,7 +113,9 @@
     "relevance_tags": [
       "frontend",
       "backend",
-      "full-stack"
+      "full-stack",
+      "mobile",
+      "games"
     ]
   },
   {
@@ -129,7 +137,9 @@
     "relevance_tags": [
       "infrastructure",
       "operations",
-      "networks"
+      "networks",
+      "linux",
+      "startups"
     ]
   }
 ]

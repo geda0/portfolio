@@ -8,8 +8,18 @@ from typing import Any, AsyncIterator
 
 from app.knowledge_context import build_context, compact_history, serialize_context_xml
 from app.messages import Msg
+from app.secret_resolver import resolve_gemini_key_into_env
 
 logger = logging.getLogger(__name__)
+
+# Bootstrap the Gemini key from Secrets Manager (no-op unless GEMINI_API_KEY_SECRET_ARN is
+# set) BEFORE anything reads it. Deliberately at import time, and this is the load-bearing
+# detail: the key is read in six places across four modules, two of them on SECURITY_GLOB
+# (main.py, live_gemini.py). Resolving into os.environ here means every one of those read
+# sites works unchanged and the gated files are not touched at all. main.py imports
+# app.providers at module scope and reads the key only inside functions, so the ordering
+# holds. Never raises — see the availability note in app/secret_resolver.py.
+resolve_gemini_key_into_env()
 
 
 def _get_provider_name() -> str:
@@ -88,11 +98,15 @@ def classify_upstream_exception(exc: BaseException) -> tuple[int, str, str]:
 
 
 def chat_tools() -> list[Any]:
-    """Function-call declarations for the Gemini text path: open_resume and
-    open_contact_form (the same two declarations Live uses, minus
-    navigate_to_section). Returned as a list of ``types.Tool`` for
-    ``GenerateContentConfig.tools``. Imported lazily so importing providers in
-    the mock path never requires google-genai."""
+    """Function-call declarations for the Gemini text path: open_resume,
+    open_contact_form and navigate_to_section - the SAME THREE Live declares
+    (ADR-0010 §2 shipped navigation parity on the text path; this docstring
+    formerly denied that the text path had the navigation tool at all, and was
+    contradicted by the function fifty lines below). The enum must stay equal to
+    live_gemini.py's; see docker/chat/tests/test_guide_tool_contract.py.
+    Returned as a list of ``types.Tool`` for ``GenerateContentConfig.tools``.
+    Imported lazily so importing providers in the mock path never requires
+    google-genai."""
     from google.genai import types
 
     return [

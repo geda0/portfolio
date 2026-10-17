@@ -17,7 +17,7 @@
       },
       "tech": [
         "Node.js",
-        "TypeScript",
+        "JavaScript",
         "Testing",
         "CI/CD"
       ],
@@ -99,7 +99,7 @@
       "link": "https://example.com",
       "linkText": "example.com",
       "tech": [
-        "Go",
+        "Golang",
         "gRPC",
         "GraphQL",
         "PostgreSQL",

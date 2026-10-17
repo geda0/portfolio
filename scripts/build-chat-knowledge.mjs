@@ -15,18 +15,18 @@ const outputDir = path.join(repoRoot, 'data', 'chat-knowledge')
 // resume/resume.json. Anything not listed here still gets the tags derived
 // from role text and tech below — these are just the extras worth curating.
 const ROLE_TAGS = {
-  'northwind systems': ['aws', 'platform architecture', 'saas', 'data pipelines', 'spark', 'kubernetes'],
-  'contoso cloud': ['platform architecture', 'saas', 'apis', 'graphql', 'kubernetes', 'mongodb'],
+  'northwind systems': ['aws', 'platform architecture', 'saas', 'data pipelines', 'spark', 'kubernetes', 'data systems', 'query systems', 'finops'],
+  'contoso cloud': ['platform architecture', 'saas', 'apis', 'graphql', 'kubernetes', 'mongodb', 'security', 'identity', 'cloud'],
   'fabrikam retail': ['subscriptions', 'saas', 'platform architecture', 'high-scale systems'],
-  'globex media': ['frontend', 'backend', 'full-stack'],
-  initech: ['infrastructure', 'operations', 'networks']
+  'globex media': ['frontend', 'backend', 'full-stack', 'mobile', 'games'],
+  initech: ['infrastructure', 'operations', 'networks', 'linux', 'startups']
 }
 
 // Manual relevance tags, keyed by project id in data/projects.json.
 const PROJECT_TAGS = {
-  'sample-toolkit': ['node.js', 'playground', 'testing', 'platform architecture'],
+  'sample-toolkit': ['node.js', 'playground', 'ai', 'platform architecture'],
   'sample-assistant': ['ai', 'this-site', 'platform architecture', 'python', 'aws'],
-  'sample-hardware': ['python', 'embedded', 'hardware'],
+  'sample-hardware': ['python', 'embedded', 'hardware', 'computer vision'],
   northwind: ['saas', 'data pipelines', 'platform architecture', 'aws', 'spark', 'kubernetes'],
   contoso: ['apis', 'graphql', 'saas', 'mongodb'],
   fabrikam: ['subscriptions', 'saas', 'backend']

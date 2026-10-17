@@ -20,9 +20,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field, field_validator
 
+from app.alerts import log_alert_gate_status
 from app.gemini_routing import GeminiRoutingChain
 from app.messages import Msg, MsgChunk, _Acc
-from app.turn_input import clamp_transport, sanitize_tool_calls
+from .site_state import SiteStateIn, format_site_state_line
+from app.turn_input import clamp_text, clamp_transport, sanitize_tool_calls
 from app.knowledge_context import (
     build_context,
     build_live_system_instruction,
@@ -43,6 +45,18 @@ from app.upstream_errors import upstream_error_body
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
+# ADR-0022 §31 — the line ABOVE is a NO-OP on the managed Lambda runtime and STAYS anyway.
+# `basicConfig` configures the root logger ONLY when root has no handlers; the runtime installs
+# one before this module imports, so it returns early having set NOTHING — not even the level,
+# which stays WARNING. MEASURED 2026-10-08 over 24 h: the Mangum host emitted 0 INFO lines
+# against 2 WARNING and 2 ERROR, where the uvicorn host — on which the call above DOES take
+# effect — emitted 125. The line below lowers the THRESHOLD only, so the runtime's handler and
+# its "[LEVEL] ts RequestId" tab framing survive. Do NOT "simplify" this to
+# basicConfig(..., force=True): it REPLACES that handler, so the record goes to a fresh stderr
+# handler with Python's default format, and §25.3-M read request-id correlation off that
+# framing. Pinned by tests/test_root_log_level.py: it asserts the record ARRIVES at a
+# pre-existing handler, because asserting the LEVEL would pass for force=True too.
+logging.getLogger().setLevel(logging.INFO)
 
 
 async def mint_live_session_async(system_instruction: str) -> Any:
@@ -157,18 +171,42 @@ class ChatMessageIn(BaseModel):
         return s
 
 
+# ADR-0022 §30.1 — `sessionId` is an IDENTITY, so its CHARACTER space is bounded
+# like its length already is (invariant #17, "rejected not clamped"). It is the
+# DynamoDB partition key AND it reaches four log/alert sinks: main.py:1046,
+# transcript_store.py:203, and the two `fire_alert` summaries (:215, :221) that
+# alerts.py:97 interpolates into the Tier-1 line. Unbounded, an anonymous caller
+# could plant `CHAT_ALERT event=` and fire the §29.4 alarm on demand, or forge
+# `env=`/`event=` INSIDE a real alert line so a stage write failure reads as a
+# prod outage. Bounded HERE, at the one identity, not at the four sinks.
+# THE ANCHORS ARE LOAD-BEARING: pydantic matches with re.search semantics, so an
+# unanchored `[A-Za-z0-9._-]+` ACCEPTS 'CHAT_ALERT event=x env=prod' — measured
+# on pydantic 2.13.4. Without `^...$` this bound is a silent no-op.
+# NOT LOSSY, verified: every id the app mints conforms — `crypto.randomUUID()`
+# and `chat-${Date.now()}-${hex}` (js/chat.js:187-191) and the store's own
+# `chat-{uuid4()}` (transcript_store.py:182) — and ids live in sessionStorage,
+# which does not outlive the tab, so there is no legacy id population to reject.
+SESSION_ID_PATTERN = r'^[A-Za-z0-9._-]{1,128}$'
+
 class ChatRequest(BaseModel):
     messages: list[ChatMessageIn] = Field(default_factory=list)
     stream: bool = False
-    sessionId: str | None = Field(default=None, max_length=128)
+    sessionId: str | None = Field(default=None, max_length=128, pattern=SESSION_ID_PATTERN)
+    # ADR-0015 ss6. Optional by contract: ABSENT means the caller asserts nothing about the
+    # site, and the prompt line is omitted entirely rather than defaulted - so an older
+    # frontend against a newer server keeps working unchanged. ONE shared sub-model with
+    # LiveSessionRequest below, because two classes for one wire shape is how providers.py
+    # and live_gemini.py came to declare two different section enums.
+    siteState: SiteStateIn | None = None
 
 
 class LiveSessionRequest(BaseModel):
-    sessionId: str | None = Field(default=None, max_length=128)
+    sessionId: str | None = Field(default=None, max_length=128, pattern=SESSION_ID_PATTERN)
+    siteState: SiteStateIn | None = None
 
 
 class LiveTranscriptTurn(BaseModel):
-    sessionId: str | None = Field(default=None, max_length=128)
+    sessionId: str | None = Field(default=None, max_length=128, pattern=SESSION_ID_PATTERN)
     userText: str = Field(default="", max_length=8000)
     assistantText: str = Field(default="", max_length=16000)
     transport: str | None = Field(default=None, max_length=32)
@@ -193,6 +231,24 @@ def _to_lc_messages(rows: list[ChatMessageIn]) -> list[Msg]:
         else:
             out.append(Msg(role="system", content=row.content))
     return out
+
+
+def _with_site_state(payload: ChatRequest, messages: list[Msg]) -> list[Msg]:
+    """Prepend the site-state line as a SYSTEM message, when there is one.
+
+    System role, not a user turn, because `gemini_routing._to_contents` folds every system
+    message OUT of the turn list and onto the END of the system instruction - so the static
+    prompt stays the identical PREFIX and the volatile line lands after it. That ordering is
+    load-bearing: Gemini's implicit cache matches an identical prefix, and cached tokens do
+    not count against the free tier's 16,000-input-tokens-per-minute-per-model quota
+    (measured 2026-10-13, the reason tests/test_cache_prefix.py exists). A volatile line
+    placed ahead of the pack truncates the cache prefix to nothing and silently costs ~2.8x
+    throughput - correct answers, green tests, and only the 429 rate moves.
+    """
+    line = format_site_state_line(payload.siteState)
+    if not line:
+        return messages
+    return [Msg(role='system', content=line), *messages]
 
 
 def _reply_text_from_result(result: Any) -> str:
@@ -360,6 +416,10 @@ def _build_flags(
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # ADR-0022 §26.5 G5 — FIRST statement in lifespan on purpose: the knowledge
+    # branch below has its own `yield` + `return`, so anything placed later is
+    # skipped on exactly the degraded start where the gate matters most.
+    log_alert_gate_status()
     pack_dir = default_pack_dir()
     prompt_path = default_system_prompt_path()
     logger.info("Loading knowledge pack from %s", pack_dir)
@@ -786,6 +846,13 @@ async def _persist_text_turn(
         'outputCharCount': len(reply_text or ''),
         'fallbackUsed': bool(fallback_used),
     }
+    # ss6.4: the MODEL's dump, never `payload` raw - the precedent is `requestMessages`
+    # above. Useful (the admin panel can see what the visitor was looking at when a turn
+    # failed) and already bounded. NOTE: if any admin rollup ever keys a histogram or facet
+    # by `section` or `projectId`, that is a new CARDINALITY sink and needs its own slice
+    # (invariant #17's residual; contact-admin.js:373 is the precedent). Filed forward.
+    if payload.siteState is not None:
+        turn['siteState'] = payload.siteState.model_dump()
     if first_token_ms is not None:
         turn['firstTokenLatencyMs'] = int(first_token_ms)
     if chunk_count is not None:
@@ -847,6 +914,7 @@ async def chat(payload: ChatRequest) -> Any:
         )
 
     lc_messages = _to_lc_messages(payload.messages)
+    lc_messages = _with_site_state(payload, lc_messages)
 
     if payload.stream:
         return StreamingResponse(
@@ -1068,9 +1136,13 @@ async def live_session(request: Request, payload: LiveSessionRequest) -> JSONRes
     mint_timeout = float(os.environ.get('GEMINI_LIVE_MINT_TIMEOUT_SEC', '50'))
     try:
         prompt_src = app.state.voice_system_prompt or app.state.system_prompt
+        # The line goes INTO the builder, never appended to its result: ss6.6's pack budget
+        # has to reserve for it, or the final truncate eats the tail of the portfolio XML
+        # and the voice agent quietly forgets part of it.
         instruction = build_live_system_instruction(
             prompt_src,
             app.state.knowledge_pack,
+            site_state_line=format_site_state_line(payload.siteState),
         )
         session_payload = await asyncio.wait_for(
             mint_live_session_async(instruction),
@@ -1204,8 +1276,8 @@ async def live_transcript(payload: LiveTranscriptTurn) -> JSONResponse:
             },
         )
 
-    user_text = (payload.userText or "").strip()
-    assistant_text = (payload.assistantText or "").strip()
+    user_text = clamp_text((payload.userText or "").strip(), 8_000)
+    assistant_text = clamp_text((payload.assistantText or "").strip(), 16_000)
     if not user_text and not assistant_text:
         return JSONResponse(status_code=204, content=None)
 

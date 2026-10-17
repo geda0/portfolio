@@ -35,7 +35,18 @@ export const STARFIELD_DEFAULT_EASE_TOWARD_REDUCED = {
 
 export function calculateFullStarCount(width, height, coresCount, baseStars) {
   const area = width * height
-  const scaleFactor = coresCount / 4
+  // MEASURED IN A REAL BROWSER 2026-10-09: this multiplier, stacked on top of area
+  // scaling, took a 2560x1440 12-core desktop to 3292 stars at 29.6-31.6ms per frame —
+  // a ~32fps ceiling with no idle time left, which is why the chat response lagged too.
+  // The same page on a phone cost 1.8ms. Area scaling is correct and stays: it holds
+  // density per pixel constant, so the sky looks the same on a laptop and a monitor.
+  // Core count is not a reason to draw a DENSER sky, only a reason to draw the same sky
+  // more smoothly — so it is clamped at 1x and can now only scale DOWN, never up. A
+  // 4-core machine is the design point (1920x1080 => 646 stars); anything faster gets the
+  // same density, and anything slower still gets relief. Bounded by
+  // test/starfield-star-budget.test.mjs, which is the only part of the render budget a
+  // stubbed canvas can referee.
+  const scaleFactor = Math.min(coresCount / 4, 1)
   const stars = baseStars ?? STARFIELD_DEFAULT_EXPERIENCE.baseStars
   return Math.floor((area / (1920 * 1080)) * stars * scaleFactor)
 }
@@ -91,4 +102,49 @@ export function snowSpeedMultiplierForPreference(prefersReducedMotion) {
   if (prefersReducedMotion) return 1
   const b = STARFIELD_DEFAULT_EASE_TOWARD_REDUCED
   return 1 + b.speedTowardReduced * (b.speedTargetSnow - 1)
+}
+
+/**
+ * How many frames does a `destination-out` erase at `eraseAlpha` need to take an 8-bit
+ * alpha channel from `start` to fully transparent? `Infinity` when it never gets there.
+ *
+ * THIS IS A REGRESSION PREDICATE, not a renderer knob. Nothing calls it at runtime.
+ *
+ * The night sky used to build its tails by not clearing: an erase at alpha 0.22 kept 78% of
+ * the previous frame. Canvas alpha is 8 bits, so each frame is `round(a * 0.78)` — which has
+ * a FIXED POINT:
+ *
+ *     round(2 * 0.78) = round(1.56) = 2
+ *     round(1 * 0.78) = round(0.78) = 1
+ *
+ * Alpha 1-2/255 never reaches 0, so every pixel a star had ever crossed kept a permanent
+ * veil that accumulated screen-wide. That fix shipped, was silently reverted along with two
+ * other correct fixes, and the regression came back on prod months later. The arithmetic is
+ * the entire bug, so it is pinned as arithmetic: one call, no canvas, no frames, no flake,
+ * and it fails on a proposed alpha BEFORE the alpha is wired to anything.
+ *
+ * @param {number} eraseAlpha  the `destination-out` alpha, in (0, 1]
+ * @param {number} start       starting 8-bit alpha, 0-255
+ * @returns {number} frames to reach 0, or Infinity if it stalls
+ */
+export function trailFramesToClear8Bit(eraseAlpha, start) {
+  if (typeof eraseAlpha !== 'number' || !Number.isFinite(eraseAlpha)
+    || eraseAlpha <= 0 || eraseAlpha > 1) {
+    // Refused, not answered. An erase of 0 removes nothing and would loop forever; reporting
+    // Infinity for it would blur "this alpha stalls" into "this input was meaningless", and
+    // those two want different fixes.
+    throw new TypeError(`trailFramesToClear8Bit: eraseAlpha must be in (0, 1], got ${eraseAlpha}`)
+  }
+  const keep = 1 - eraseAlpha
+  let a = Math.max(0, Math.min(255, Math.round(Number(start) || 0)))
+  let frames = 0
+  while (a > 0) {
+    const next = Math.round(a * keep)
+    // No progress means no progress for every later frame too: the map is monotone, so a
+    // value that maps to itself is a fixed point and the erase never finishes.
+    if (next >= a) return Infinity
+    a = next
+    frames++
+  }
+  return frames
 }

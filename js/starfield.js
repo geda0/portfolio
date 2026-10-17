@@ -1,4 +1,5 @@
 // starfield.js - Theme-aware canvas (starfield | snow)
+import { starIsOffCanvas } from './starfield-geom.js';
 import {
   STARFIELD_DEFAULT_EXPERIENCE,
   calculateFullStarCount,
@@ -12,6 +13,92 @@ import {
   snowSpeedMultiplierForPreference
 } from './starfield-prefs.js'
 import { sceneParamsAt } from './theme-time.js'
+
+/**
+ * Comet-tail geometry (module scope so it is testable without a canvas).
+ *
+ * The night sky used to build its tails by NOT clearing: a `destination-out`
+ * erase at alpha 0.22 kept 78% of the previous frame, so each star's glow piled
+ * up over ~14 frames. That accumulation is also why trails never went away —
+ * multiplying 8-bit alpha by 0.78 leaves pixels stuck at alpha 1 forever.
+ *
+ * Instead we clear fully every frame and draw the ENTIRE tail each frame, from a
+ * point STREAK_TAIL_FRAMES worth of motion behind the star. Same comet, drawn
+ * fresh: no accumulation, no residue, still one drawImage per star.
+ */
+export const STREAK_TAIL_FRAMES = 8;
+/** Longest tail we draw — a fast or respawned star must not smear across the screen. */
+export const STREAK_MAX_DIST = 150;
+/** Sub-pixel tails are invisible; skip the draw entirely. */
+export const STREAK_MIN_DIST = 1;
+export const STREAK_THICKNESS = 1.5;
+/**
+ * Per-frame brightness. The old renderer got its brightness for free by letting
+ * ~14 frames of glow pile up on an uncleared canvas. On a cleared canvas each
+ * star is drawn exactly once, so the single pass has to carry the same weight:
+ * a slightly wider glow and a stronger streak head restore the night sky's
+ * density without ever accumulating.
+ */
+export const STAR_GLOW_SCALE = 2.2;
+export const STREAK_ALPHA = 0.62;
+
+/**
+ * Depth guards. The projection is `size * (focalLength / z)`, so a star aimed near
+ * the centre of the screen grows without bound as z approaches the camera — at
+ * z = 0.01*W it projects to ~313px, a beach ball flying into the viewer's face.
+ * Three guards, bluntest last:
+ *   1. NEAR PLANE  — recycle the star before it can ever reach the camera.
+ *   2. DEPTH FADE  — dissolve it on the way in, so it never pops out of existence.
+ *   3. RADIUS CLAMP — a hard ceiling, so no arithmetic can produce a ball.
+ * Ratios are of the canvas width (z is seeded in [0, width) and focalLength = width).
+ */
+export const STAR_NEAR_PLANE_RATIO = 0.15;
+export const STAR_FADE_START_RATIO = 0.32;
+export const STAR_MAX_RADIUS = 9;
+
+export function starNearPlane(width) {
+  return width * STAR_NEAR_PLANE_RATIO;
+}
+
+export function starFadeStart(width) {
+  return width * STAR_FADE_START_RATIO;
+}
+
+/** 1 while far away, easing to 0 at the near plane. Never pops. */
+export function starDepthFade(z, width) {
+  const near = starNearPlane(width);
+  if (z <= near) return 0;
+  const start = starFadeStart(width);
+  if (z >= start) return 1;
+  return (z - near) / (start - near);
+}
+
+/** A star is retired at the near plane, or once it has drifted out of frame. */
+export function starShouldRecycle(z, x, y, width, height) {
+  return z <= starNearPlane(width) || x < 0 || x > width || y < 0 || y > height;
+}
+
+/** A star is a point of light, never a ball — whatever the projection returns. */
+export function clampStarRadius(radius) {
+  return Math.min(radius, STAR_MAX_RADIUS);
+}
+
+/** Tail length for a star that moved `frameDelta` px this frame. */
+export function streakLength(frameDelta, tailFrames = STREAK_TAIL_FRAMES) {
+  return Math.min(frameDelta * tailFrames, STREAK_MAX_DIST);
+}
+
+/**
+ * Compensation repays exactly ONE debt: the glow the old default-motion night path
+ * accumulated on an uncleared canvas. Paths that already cleared every frame owe
+ * nothing and must render exactly as before.
+ *   - reduced-motion night erased at alpha 1 — a FULL clear, it never accumulated
+ *   - the daytime path already called clearRect — it never accumulated
+ * Brightening either would be an unasked visual (and a11y) regression.
+ */
+export function compensateForClearedTrail(prefersReducedMotion, dayScene) {
+  return !prefersReducedMotion && !dayScene;
+}
 
 /** Living time-of-day mode is active when theme.js has marked the root. */
 function isTimeMode() {
@@ -102,6 +189,20 @@ export function initStarfield(canvasId, options = {}) {
   /** Set in drawSpace each frame; Star.move multiplies depth speed by this. */
   let starSpeedScale = 1;
 
+  /**
+   * Set per frame by the draw path, exactly like starSpeedScale. Only the
+   * default-motion night path lost accumulated glow, so only it is compensated;
+   * every already-clearing path keeps its original single-pass look.
+   */
+  let starGlowScale = 1;
+  let starTailFrames = 1;
+
+  /** Called by each draw path before the star loop. */
+  function setTrailCompensation(compensate) {
+    starGlowScale = compensate ? STAR_GLOW_SCALE : 1;
+    starTailFrames = compensate ? STREAK_TAIL_FRAMES : 1;
+  }
+
   // Precomputed color palette: stars pick from this instead of building an
   // hsl() string on every spawn/respawn. Visually equivalent to randomColor().
   const STAR_PALETTE_SIZE = 64;
@@ -110,36 +211,92 @@ export function initStarfield(canvasId, options = {}) {
     starPalette.push(randomColor());
   }
 
-  function paletteColor() {
-    return starPalette[(Math.random() * STAR_PALETTE_SIZE) | 0];
+  function paletteColorIndex() {
+    return (Math.random() * STAR_PALETTE_SIZE) | 0;
+  }
+
+  // Star sprites — same trick as the snowflake sprite above, but the stars are
+  // ~1100 per frame (vs ~200 flakes), so this is where it actually pays: we were
+  // building a fresh radial gradient PER STAR PER FRAME (~68k allocations/sec) and
+  // a fresh linear gradient per motion streak (~64k/sec). Bake one glow sprite and
+  // one streak strip per palette colour once, then drawImage them.
+  const STAR_SPRITE_RADIUS = 32;
+  const STREAK_SPRITE_W = 64;
+  const STREAK_SPRITE_H = 4;
+
+  const starSprites = [];
+  const streakSprites = [];
+  for (let i = 0; i < STAR_PALETTE_SIZE; i++) {
+    const color = starPalette[i];
+
+    // Radial glow, colour at the core fading to transparent (identical stops to
+    // the per-frame gradient it replaces).
+    const glowSprite = document.createElement('canvas');
+    glowSprite.width = STAR_SPRITE_RADIUS * 2;
+    glowSprite.height = STAR_SPRITE_RADIUS * 2;
+    const gc = glowSprite.getContext('2d');
+    const rg = gc.createRadialGradient(
+      STAR_SPRITE_RADIUS, STAR_SPRITE_RADIUS, 0,
+      STAR_SPRITE_RADIUS, STAR_SPRITE_RADIUS, STAR_SPRITE_RADIUS
+    );
+    // Solid core out to 22% of the radius so a sub-pixel star still reads as a
+    // point of light in a single pass, then a soft falloff for the halo.
+    rg.addColorStop(0, color);
+    rg.addColorStop(0.22, color);
+    rg.addColorStop(1, 'transparent');
+    gc.fillStyle = rg;
+    gc.beginPath();
+    gc.arc(STAR_SPRITE_RADIUS, STAR_SPRITE_RADIUS, STAR_SPRITE_RADIUS, 0, Math.PI * 2);
+    gc.fill();
+    starSprites.push(glowSprite);
+
+    // Streak strip: transparent at the tail (x=0), star colour at the head (x=W).
+    // Drawn rotated/scaled onto the px→x segment, so the tail fade is preserved.
+    const streakSprite = document.createElement('canvas');
+    streakSprite.width = STREAK_SPRITE_W;
+    streakSprite.height = STREAK_SPRITE_H;
+    const sc2 = streakSprite.getContext('2d');
+    const lg = sc2.createLinearGradient(0, 0, STREAK_SPRITE_W, 0);
+    lg.addColorStop(0, 'transparent');
+    lg.addColorStop(1, color.replace('hsl(', 'hsla(').replace(')', `, ${STREAK_ALPHA})`));
+    sc2.fillStyle = lg;
+    sc2.fillRect(0, 0, STREAK_SPRITE_W, STREAK_SPRITE_H);
+    streakSprites.push(streakSprite);
   }
 
   function Star() {
     this.x = Math.random() * canvas.width;
     this.y = Math.random() * canvas.height;
-    this.z = Math.random() * canvas.width;
-    this.color = paletteColor();
+    // Seed in front of the near plane, so a fresh star is never recycled on frame 1.
+    const near = starNearPlane(canvas.width);
+    this.z = near + Math.random() * (canvas.width - near);
+    this.colorIndex = paletteColorIndex();
     this.size = Math.random() / 2;
     this.px = null;
     this.py = null;
+  }
 
-    this.move = function () {
+  // ON THE PROTOTYPE, not assigned per instance. The constructor used to create two closures
+  // for every star - at the 4-core design point that is 717 stars x 2 function objects, all
+  // identical, allocated on every resize. They still close over initStarfield's scope
+  // (`canvas`, `c`, `fl`, the sprites), because `Star` itself lives inside it.
+  Star.prototype.move = function () {
       var speed =
         (config.baseSpeed + (canvas.width - this.z) / canvas.width * 4) *
         starSpeedScale;
       this.z = this.z - speed;
 
-      if (this.z <= 0 || this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) {
+      if (starShouldRecycle(this.z, this.x, this.y, canvas.width, canvas.height)) {
         this.z = canvas.width;
         this.x = Math.random() * canvas.width;
         this.y = Math.random() * canvas.height;
-        this.color = paletteColor();
+        this.colorIndex = paletteColorIndex();
         this.px = null;
         this.py = null;
       }
-    };
+  };
 
-    this.show = function () {
+  Star.prototype.show = function () {
       var x, y, s;
       x = (this.x - centerX) * (fl / this.z);
       x = x + centerX;
@@ -151,49 +308,95 @@ export function initStarfield(canvasId, options = {}) {
 
       this.glow = (canvas.width - this.z) / canvas.width * 15;
 
-      // Motion streaks: default only (reduced-motion users get stars without streaks)
-      if (
-        !prefersReducedMotion &&
-        this.px !== null &&
-        this.py !== null
-      ) {
-        const dist = Math.hypot(x - this.px, y - this.py);
-        if (dist < 150) {
-          // Create linear gradient along the streak: transparent at tail, star color at head
-          const streakGradient = c.createLinearGradient(this.px, this.py, x, y);
-          // Convert HSL color to HSLA with opacity (hsl(360, 100%, 50%) -> hsla(360, 100%, 50%, 0.5))
-          // Lower opacity than before — streaks should suggest motion, not draw the eye.
-          const colorWithOpacity = this.color.replace('hsl(', 'hsla(').replace(')', ', 0.38)');
-          streakGradient.addColorStop(0, 'transparent');
-          streakGradient.addColorStop(1, colorWithOpacity);
+      // Dissolve the star as it closes on the camera, so it leaves the scene by the
+      // near plane instead of popping — and never as a ball, thanks to the clamp.
+      const fade = starDepthFade(this.z, canvas.width);
+      if (fade <= 0) return;
 
-          c.save();
-          c.strokeStyle = streakGradient;
-          c.lineWidth = 1.5;
-          c.lineCap = 'round';
-          c.beginPath();
-          c.moveTo(this.px, this.py);
-          c.lineTo(x, y);
-          c.stroke();
-          c.restore();
+      // Glow radius drives the star sprite and the streak width.
+      const radius = clampStarRadius(s * (1.5 + this.glow / 10) * starGlowScale);
+
+      // Where this frame's streak would start, computed BEFORE the cull so the cull can
+      // see the whole comet rather than just the head.
+      let streakTailX, streakTailY, streakDx, streakDy, streakDist, streakLen;
+      const streaking =
+        !prefersReducedMotion && this.px !== null && this.py !== null;
+      if (streaking) {
+        streakDx = x - this.px;
+        streakDy = y - this.py;
+        streakDist = Math.hypot(streakDx, streakDy);
+        streakLen = streakLength(streakDist, starTailFrames);
+        if (streakLen >= STREAK_MIN_DIST) {
+          streakTailX = x - (streakDx / streakDist) * streakLen;
+          streakTailY = y - (streakDy / streakDist) * streakLen;
         }
       }
 
-      // Draw the star
-      var gradient = c.createRadialGradient(x, y, 0, x, y, s * (1.5 + this.glow / 10));
-      gradient.addColorStop(0, this.color);
-      gradient.addColorStop(1, 'transparent');
+      // CULL. The projection throws stars outward as z shrinks and ~25-36% of them land
+      // entirely off-canvas, where the canvas clipped every pixel anyway - so this is exact,
+      // not approximate. `px`/`py` are still updated below: the streak is drawn from the
+      // PREVIOUS projected position, so returning without updating it would make a star that
+      // wanders off and comes back smear from wherever it left.
+      if (starIsOffCanvas(
+        { x: x, y: y, radius: radius, tailX: streakTailX, tailY: streakTailY },
+        canvas.width, canvas.height
+      )) {
+        this.px = x;
+        this.py = y;
+        return;
+      }
 
-      c.beginPath();
-      c.fillStyle = gradient;
-      c.arc(x, y, s * (1.5 + this.glow / 10), 0, Math.PI * 2);
-      c.fill();
+      // Everything this star draws this frame is scaled by its depth fade.
+      const layerAlpha = c.globalAlpha;
+      c.globalAlpha = layerAlpha * fade;
+
+      // Motion streaks: default only (reduced-motion users get stars without streaks).
+      // The baked strip sprite carries the tail→head fade, so no gradient per frame.
+      if (streaking) {
+        const dx = streakDx;
+        const dy = streakDy;
+        const dist = streakDist;
+        const tail = streakLen;
+        if (tail >= STREAK_MIN_DIST) {
+          // Draw the whole comet each frame, tail-end `tail` px behind the star,
+          // so the sprite's transparent→colour fade lands head-on at (x, y).
+          //
+          // ONE setTransform instead of save/translate/rotate/restore. The pair guarded only
+          // the transform - globalAlpha is set above it and restored below, outside this
+          // block - and the matrix for `translate(tx,ty)` then `rotate(θ)` is exactly
+          // [cos, sin, -sin, cos, tx, ty]. The canvas carries no base transform (no DPR
+          // scale anywhere in this file), so resetting to the identity is equivalent to the
+          // restore it replaces. Four calls per streaking star per frame become two.
+          const cos = dx / dist;
+          const sin = dy / dist;
+          c.setTransform(
+            cos, sin, -sin, cos,
+            x - cos * tail, y - sin * tail
+          );
+          c.drawImage(
+            streakSprites[this.colorIndex],
+            0, -STREAK_THICKNESS / 2, tail, STREAK_THICKNESS
+          );
+          c.setTransform(1, 0, 0, 1, 0, 0);
+        }
+      }
+
+      // Draw the star: scale the baked glow sprite to this star's radius.
+      // `radius` is declared above, already depth-clamped — one source for the
+      // streak width and the glow sprite, so they cannot disagree.
+      if (radius > 0) {
+        c.drawImage(
+          starSprites[this.colorIndex],
+          x - radius, y - radius, radius * 2, radius * 2
+        );
+      }
+
+      c.globalAlpha = layerAlpha;
 
       // Update previous position for next frame
       this.px = x;
       this.py = y;
-    };
-  }
+  };
 
   /** Elegant night-sky palette: mostly cool whites + soft periwinkles, rare warm
    *  sparks. Saturation kept low (~35–55%) so stars feel like distant suns, not
@@ -314,6 +517,8 @@ export function initStarfield(canvasId, options = {}) {
     const trail = spaceTrailAlphaForPreference(prefersReducedMotion);
     c.fillStyle = `rgba(20, 25, 38, ${trail})`;
     c.fillRect(0, 0, canvas.width, canvas.height);
+    // This path still accumulates via its own wash — it owes no compensation.
+    setTrailCompensation(false);
     starSpeedScale = starSpeedMultiplierForPreference(prefersReducedMotion);
     for (var i = 0; i < numStars; i++) {
       stars[i].show();
@@ -386,6 +591,8 @@ export function initStarfield(canvasId, options = {}) {
       // (Stars are ~0 by day, so there's no trail to preserve.)
       c.clearRect(0, 0, w, h);
       if (sp.star > 0.01) {
+        // Already cleared every frame before this change — nothing to repay.
+        setTrailCompensation(compensateForClearedTrail(prefersReducedMotion, dayScene));
         starSpeedScale = starSpeedMultiplierForPreference(prefersReducedMotion);
         c.save();
         c.globalAlpha = sp.star;
@@ -405,14 +612,17 @@ export function initStarfield(canvasId, options = {}) {
       return;
     }
 
-    // Night: star motion-streak trails via a partial erase (keeps the canvas
-    // transparent so the interpolated sky shows through) + fireflies at dusk.
-    // No snow at night.
-    c.globalCompositeOperation = 'destination-out';
-    c.fillStyle = `rgba(0, 0, 0, ${prefersReducedMotion ? 1 : 0.22})`;
-    c.fillRect(0, 0, w, h);
-    c.globalCompositeOperation = 'source-over';
+    // Night: FULL clear every frame (same as the daytime path). A partial
+    // `destination-out` erase never actually finished — multiplying 8-bit alpha
+    // by 0.78 leaves pixels stuck at alpha 1 forever, so old streaks accumulated
+    // into permanent ghost trails. Motion is already conveyed by each star's
+    // per-frame streak sprite, so nothing is lost and the canvas stays
+    // transparent for the interpolated sky behind it.
+    c.clearRect(0, 0, w, h);
     if (sp.star > 0.01) {
+      // Default motion lost ~14 frames of accumulated glow here — and only here.
+      // Reduced motion already erased at alpha 1 (a full clear), so it owes nothing.
+      setTrailCompensation(compensateForClearedTrail(prefersReducedMotion, dayScene));
       starSpeedScale = starSpeedMultiplierForPreference(prefersReducedMotion);
       c.save();
       c.globalAlpha = sp.star;

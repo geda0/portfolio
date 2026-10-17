@@ -28,17 +28,29 @@ const REPO = fileURLToPath(new URL('..', import.meta.url))
 const ENV_HOSTS = {
   prod: {
     contact: 'abcd123456.execute-api.us-east-2.amazonaws.com',
-    // ADR-0007 Phase 4: prod chat migrated ECS+ALB -> ECS Express Mode (same managed successor
-    // as staging; App Runner is maintenance-mode). Browser-direct voice => plain HTTP, so the
-    // ECS-managed *.ecs.<region>.on.aws URL + TLS is all prod needs (no chat-api custom domain).
-    chat: 'example-chat-host.ecs.us-east-2.on.aws'
+    // ADR-0022: prod chat moved OFF the ECS Express host onto its OWN CloudFront distribution,
+    // 2026-10-08, after the same shape ran on stage. `/api/chat` goes to the response-streaming
+    // Lambda Function URL via OAC; everything else — the paid voice mint included — goes to the
+    // throttled prod HttpApi. VERIFIED through this front door before the flip: /health 200,
+    // streaming returns token then done, a forged sessionId is rejected 400, and the voice mint
+    // returns liveVoiceTransport=direct_google with a Google wss URL, so the browser still
+    // connects straight to Google.
+    // The PRIOR value was 'example-chat-host-prev.ecs.us-east-2.on.aws' (ECS
+    // Express). That service is deliberately STILL RUNNING: per ADR-0022 §27.1 its hostname is
+    // unrecoverable once deleted, so Express-still-existing IS the rollback, and reverting this
+    // flip is a one-line meta change for as long as that holds. Do not delete it to tidy up.
+    chat: 'd222222abcdef8.cloudfront.net'
   },
   stage: {
     contact: 'ijkl345678.execute-api.us-east-2.amazonaws.com',
-    // ADR-0007 Phase 3: staging chat is hosted on ECS Express Mode (AWS's managed successor
-    // to App Runner, which entered maintenance mode 2026-04-30). Browser-direct voice means
-    // no WS to host, so the ECS-managed *.ecs.<region>.on.aws URL + TLS is all staging needs.
-    chat: 'gv-d7fa1a51ec09445caf0d435348131479.ecs.us-east-2.on.aws'
+    // ADR-0022: staging chat moved OFF the ECS Express host onto the CloudFront distribution
+    // that fronts both origins — `/api/chat` to the response-streaming Lambda Function URL via
+    // OAC, everything else (the paid voice mint included) to the throttled HttpApi. Prod is
+    // deliberately NOT moved: that is gated on a human voice pass and the Lambda concurrency
+    // quota. A public Function URL cannot be reached directly (anonymous AuthType NONE is
+    // blocked account-wide), so the distribution is not an optimisation here, it is the only
+    // browser-reachable streaming path.
+    chat: 'd111111abcdef8.cloudfront.net'
   }
 }
 
@@ -47,7 +59,18 @@ function resolveExpectedEnv (env) {
   if (explicit === 'prod' || explicit === 'production') return 'prod'
   if (explicit === 'stage' || explicit === 'staging') return 'stage'
   if (explicit) return null // explicit but unrecognized -> do not guess an environment
-  const branch = String(env.GITHUB_REF_NAME || '').trim()
+  // Branch inference, so the guard ARMS ITSELF wherever it runs:
+  //   GITHUB_REF_NAME — GitHub Actions
+  //   AWS_BRANCH      — AWS Amplify (set by the build; needs no console configuration)
+  //
+  // AWS_BRANCH added 2026-10-14 after measuring that PORTFOLIO_EXPECTED_ENV is unset on EVERY
+  // Amplify app and branch, so this guard resolved nothing and SKIPPED on every Amplify build
+  // it has ever run in — it was decoration. The miss was real: merging main into agent carried
+  // PROD hosts onto the staging branch and three consecutive stage builds reported SUCCEED.
+  //
+  // A guard whose arming depends on someone remembering a console variable is unarmed exactly
+  // when it matters. Do not reduce this back to PORTFOLIO_EXPECTED_ENV alone.
+  const branch = String(env.GITHUB_REF_NAME || env.AWS_BRANCH || '').trim()
   if (branch === 'main') return 'prod'
   if (branch === 'agent') return 'stage'
   return null

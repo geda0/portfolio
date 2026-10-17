@@ -3,9 +3,21 @@ import { openContactDialog } from './contact.js'
 import { chatBus } from './chat-bus.js'
 import { chatApiUrl } from './site-config.js'
 import { normalizeSection } from './section-names.js'
+import { requestNavigation } from './navigation.js'
+import {
+  subscribe as subscribeSiteState,
+  getSiteState,
+  getSiteStateForWire,
+  siteStateWireIfNotable,
+  setChatStage,
+  setVoiceActive
+} from './site-state.js'
+import { nextChatStage, stageChrome } from './chat-stage.js'
 import { bindChatLiveVoice } from './chat-live.js'
 import { PANEL_ANIM_MS, PANEL_ANIM_EASE } from './chat-panel-anim.js'
 import { deriveReplyText } from './chat-reply-text.js'
+import { hasNavPromiseGap } from './nav-promise-gap.js'
+import { buildChatRequest } from './chat-payload-hash.js'
 
 const CHAT_DEFAULT_PATH = '/api/chat'
 const RESUME_URL = 'resume/resume.pdf'
@@ -162,7 +174,6 @@ function replaceSectionPresetChips(container, chips, chipClassName) {
   })
 }
 
-const EV_COLLAPSE = 'portfolio:site-chat-collapse'
 /** Open chat dialog from decoupled surfaces (e.g. spaceman) without importing chat from those modules. */
 export const EV_OPEN_CHAT = 'portfolio:open-chat'
 const SESSION_KEY = 'portfolio-chat-session-id'
@@ -179,7 +190,6 @@ function readChipLabel(el) {
   return String(el?.textContent || '').trim()
 }
 
-let collapseChat = () => {}
 let syncChatLaunchersImpl = () => {}
 
 function createSessionId() {
@@ -233,10 +243,6 @@ function isFinePointer() {
 
 function launcherReadOnlyForDevice() {
   return !isFinePointer()
-}
-
-export function collapseChatDialog() {
-  collapseChat()
 }
 
 export function syncChatLaunchers(section = 'home') {
@@ -881,13 +887,96 @@ export function initChat() {
     reconcileComposerControls()
   }
 
-  const setDialogVisible = (visible) => {
-    dialog.hidden = !visible
-    dialog.setAttribute('aria-hidden', visible ? 'false' : 'true')
-    document.body.classList.toggle('chat-dialog-open', visible)
+  // ---------------------------------------------------------------- the stage (ADR-0015 ss4)
+  //
+  // The chat has four stages, and a site event no longer COMMANDS it to close - it reports
+  // what changed, and the pure reducer in js/chat-stage.js decides what that means. The old
+  // chain (js/app.js -> collapseChatDialog -> closePanel -> snapClose -> stopVoice) is gone:
+  // it is why the assistant's own navigate_to_section tore down the session that had just
+  // promised the move (ss9.1).
+  //
+  // The 768px query lives HERE and nowhere in the reducer: ctx.wide is injected, so the
+  // reducer stays pure and testable without a DOM (ss4.2).
+  let chatStage = 'closed'
+  const isWideViewport = () => (
+    typeof window.matchMedia === 'function'
+      ? window.matchMedia('(min-width: 768px)').matches
+      : true
+  )
+
+  // stageChrome returns the accessibility contract as DATA; this is the only place that
+  // turns it into attributes. Each field is a defect that shipped or nearly did:
+  //  - backdropHidden: the backdrop is a real inset:0 element with backdrop-filter
+  //    (index.html:299). Fading it would leave the site visually operable and dead to clicks.
+  //  - scrollLock: body.chat-dialog-open sets overflow:hidden (css/chat.css:1-3).
+  //  - ariaModal: STATIC "true" in the markup (index.html:300). A yielded card still
+  //    claiming it tells a screen reader the rest of the page does not exist.
+  const applyStageChrome = (stage) => {
+    const chrome = stageChrome(stage)
+    dialog.hidden = chrome.dialogHidden
+    dialog.setAttribute('aria-hidden', chrome.dialogHidden ? 'true' : 'false')
+    dialog.dataset.chatStage = stage
+    if (backdrop) {
+      backdrop.hidden = chrome.backdropHidden
+      backdrop.setAttribute('aria-hidden', 'true')
+    }
+    document.body.classList.toggle('chat-dialog-open', chrome.scrollLock)
+    panel?.setAttribute('aria-modal', chrome.ariaModal)
+    dialog.style.pointerEvents = chrome.pointerEventsOnShell
   }
 
-  const snapClose = ({ restoreFocus = true } = {}) => {
+  /** Apply a stage: chrome, local field, store. Never routes through closePanel. */
+  const applyStage = (stage, origin) => {
+    chatStage = stage
+    applyStageChrome(stage)
+    setChatStage(stage, { origin })
+  }
+
+  /**
+   * Feed one event to the reducer and land wherever it says.
+   *
+   * `closed` is the one stage that goes through closePanel, because closing is more than
+   * chrome (animation, focus restore, the voice stop the VISITOR is entitled to). Everything
+   * else is chrome only - which is the whole point: a yield must not touch the session.
+   */
+  const dispatchStage = (event, origin) => {
+    const next = nextChatStage(chatStage, event, { wide: isWideViewport() })
+    if (next === chatStage) return
+    if (next === 'closed') {
+      closePanel({ restoreFocus: origin === 'visitor', immediate: true })
+      return
+    }
+    applyStage(next, origin)
+  }
+
+  // Which store field means which reducer event. chatStage and voiceActive are js/chat.js's
+  // OWN fields (ss3.2), so they map to nothing - that is what keeps the subscription from
+  // feeding its own writes back into the reducer.
+  const stageEventForChange = (change) => {
+    if (change.field === 'section') return 'navigate'
+    if (change.field === 'project') return change.to ? 'project-open' : 'project-close'
+    if (change.field === 'contactOpen') return change.to ? 'contact-open' : 'contact-close'
+    return null
+  }
+
+  // The DOM has to agree with the stage from the first frame, not from the first tap.
+  // index.html hard-codes aria-modal="true" on the panel and nothing set data-chat-stage
+  // until an open — so between load and first open the markup claimed a modal that did not
+  // exist, and every stage rule in css/chat.css had no hook to match. No store write here:
+  // 'closed' is already the initial value, so a write would be a same-value no-op anyway.
+  applyStageChrome('closed')
+
+  subscribeSiteState((_snapshot, change) => {
+    if (!change) return
+    const event = stageEventForChange(change)
+    if (!event) return
+    // 'system': a layout-driven stage change is neither the visitor moving the chat nor the
+    // agent doing it (ss3.3). Mislabelling it would make ss7's live note either announce
+    // something the visitor did not do, or dedupe away a note the agent does need.
+    dispatchStage(event, 'system')
+  })
+
+  const snapClose = ({ restoreFocus = true, keepVoice = false } = {}) => {
     clearPanelAnimation()
     clearPlaceholderHighlightTimer()
     dialogSuggestions?.querySelector(`button[${PLACEHOLDER_DIALOG_CHIP_ATTR}]`)
@@ -898,17 +987,32 @@ export function initChat() {
     // Also catches the connecting window — without this, X-ing the dialog
     // while the WS handshake is still in flight let the session establish
     // server-side and idle until the no-mic timer fired.
+    //
+    // keepVoice: project invariant #20 (ADR-0015 §8) - a site-layout or navigation change
+    // must NEVER end a live voice session. The reason above is sound for the VISITOR closing
+    // the dialog, and is kept for that. But a navigation, a project dialog or the contact
+    // dialog is not the visitor closing the chat: it is the assistant being asked to move the
+    // site, often by its OWN navigate_to_section / open_contact_form call - which tore down
+    // the very session that had just promised the action (ADR-0015 §9.1).
+    //
+    // Gating only the stopVoice, deliberately: the rest of snapClose still runs, so the panel
+    // still collapses and this is not a no-op. ADR-0015 §4 later replaces the collapse with a
+    // stage reducer (docked / minimized rather than closed); this keeps the voice session
+    // alive in the meantime without pre-empting that design.
     if (
-      liveVoice?.isSessionOpen?.()
-      || liveUi.connecting
-      || liveUi.active
-      || voiceStartRequested
+      !keepVoice
+      && (
+        liveVoice?.isSessionOpen?.()
+        || liveUi.connecting
+        || liveUi.active
+        || voiceStartRequested
+      )
     ) {
       liveVoice?.stopVoice?.({ silent: true })
     }
     clearVoiceAwaitingStart()
     dockMode = 'voice'
-    setDialogVisible(false)
+    applyStage('closed', 'visitor')
     state.agentNodeApi?.setState?.('bubble')
     agentInput.readOnly = launcherReadOnlyForDevice()
     agentInput.blur()
@@ -934,6 +1038,12 @@ export function initChat() {
   const openPanel = ({ mode = 'text' } = {}) => {
     const wantVoice = mode === 'voice'
     if (isOpen()) {
+      // A yielded panel is still "open" — stageChrome keeps the dialog in the DOM for
+      // docked and minimized, so isOpen() (!dialog.hidden) is true for both. The visitor
+      // asking for the chat has to PROMOTE it, or tapping a launcher while it sits
+      // minimised would set the dock mode and return with nothing moving on screen, and on
+      // a narrow viewport that is a conversation with no way back to it.
+      if (chatStage !== 'modal') applyStage('modal', 'visitor')
       setDockMode(wantVoice ? 'voice' : 'text', {
         awaitingVoice: wantVoice
       })
@@ -952,7 +1062,7 @@ export function initChat() {
     state.lastFocus = document.activeElement
     clearPanelAnimation()
     state.agentNodeApi?.setState?.('modal')
-    setDialogVisible(true)
+    applyStage('modal', 'visitor')
     agentInput.readOnly = true
     agentInput.blur()
 
@@ -979,18 +1089,18 @@ export function initChat() {
     })
   }
 
-  const closePanel = ({ restoreFocus = true, immediate = false } = {}) => {
+  const closePanel = ({ restoreFocus = true, immediate = false, keepVoice = false } = {}) => {
     if (!isOpen()) return
     clearPanelAnimation()
     if (immediate || prefersReducedMotion()) {
-      snapClose({ restoreFocus })
+      snapClose({ restoreFocus, keepVoice })
       return
     }
 
     const token = ++panelAnim.token
     const seedRect = readSeedRect()
     if (!seedRect) {
-      snapClose({ restoreFocus })
+      snapClose({ restoreFocus, keepVoice })
       return
     }
 
@@ -1004,7 +1114,7 @@ export function initChat() {
 
     const finish = () => {
       if (token !== panelAnim.token) return
-      snapClose({ restoreFocus })
+      snapClose({ restoreFocus, keepVoice })
     }
 
     panelAnim.endHandler = (event) => {
@@ -1016,10 +1126,12 @@ export function initChat() {
     panel.style.transform = toTransform
   }
 
-  collapseChat = () => closePanel({ restoreFocus: false, immediate: true })
-
   const openContactFromChat = (prefill) => {
-    closePanel({ restoreFocus: false, immediate: true })
+    // No closePanel here any more. js/contact.js writes contactOpen, the subscription above
+    // feeds `contact-open` to the reducer, and the panel MINIMISES. The old version closed
+    // the panel synchronously, which is what dropped the tool response for the assistant's
+    // own open_contact_form call: stopVoice nulled chat-live's `ws` before the send-guard
+    // ran, so the model waited forever on a function response (ADR-0015 ss9.3 c1).
     openContactDialog()
     if (!prefill || typeof prefill !== 'object') return
 
@@ -1147,18 +1259,34 @@ export function initChat() {
   const postChatOnce = async (history, { onDelta } = {}) => {
     let response
     try {
+      // CloudFront + OAC in front of a Lambda Function URL requires the viewer to send
+      // `x-amz-content-sha256` over the request body; Lambda rejects unsigned payloads and
+      // recomputes the hash over the real bytes (absent / UNSIGNED-PAYLOAD -> 403
+      // InvalidSignatureException). Sent unconditionally: ECS and API Gateway ignore it.
+      // The body MUST come from buildChatRequest and must not be re-serialized, or the
+      // digest stops matching the bytes that go out.
+      //
+      // siteState goes INSIDE the object passed to buildChatRequest, never merged into the
+      // body afterwards - the digest covers the exact bytes, so a payload serialized twice
+      // is a 403 at the edge, i.e. the chat is down. Omitted entirely when there is nothing
+      // to say (ADR-0015 ss6.2): the server then omits the prompt line rather than telling
+      // the model the visitor is on the page it would have assumed anyway.
+      const site = siteStateWireIfNotable()
+      const { body, headers } = await buildChatRequest({
+        messages: history,
+        stream: true,
+        sessionId: state.sessionId,
+        language: currentLanguage,
+        ...(site ? { siteState: site } : {})
+      })
       response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'text/event-stream, application/json'
+          'Accept': 'text/event-stream, application/json',
+          ...headers
         },
-        body: JSON.stringify({
-          messages: history,
-          stream: true,
-          sessionId: state.sessionId,
-          language: currentLanguage
-        })
+        body
       })
     } catch (_) {
       // fetch() rejects on offline / DNS / connection reset — all transient.
@@ -1285,6 +1413,14 @@ export function initChat() {
       // The model sometimes fires a tool (open résumé / navigate / contact) with no
       // prose — derive a useful line tied to the action instead of the bare fallback.
       const safeReply = deriveReplyText(reply, actions)
+      // RECORDED, NEVER ACTED ON (ADR-0015 §5.2). On the text path a navigate ACTION is the
+      // promise kept — the button is the affordance, and the assistant cannot move the page
+      // without a tap — so an action translates to the tool name the predicate knows.
+      if (hasNavPromiseGap(safeReply, actions.map((a) => ({
+        name: a && a.id === 'navigate' ? 'navigate_to_section' : (a && a.id)
+      })))) {
+        trackEvent('chat_nav_promise_gap', { modality: 'text' })
+      }
       state.history = state.history.concat({ role: 'assistant', content: safeReply })
       finalizeAssistantMessage(pendingAssistant, safeReply, actions)
       setStatus('')
@@ -1421,11 +1557,20 @@ export function initChat() {
     closePanel({ immediate: hasActiveTransition })
   })
 
-  window.addEventListener(EV_COLLAPSE, () => {
-    closePanel({ restoreFocus: false, immediate: true })
-  })
-
   dialog.addEventListener('click', (event) => {
+    // At the minimised size the panel renders as the header alone — a title and a close X
+    // (MEASURED in the browser) — so the pill itself has to be the way back, or a visitor
+    // whose only visible control says "close" can lose a live conversation to a mis-tap.
+    // Only when minimised: a docked card is a usable panel, and promoting it on any click
+    // would mean the first tap in the transcript yanked them into a full-screen modal.
+    // `restore` is a visitor act, not a side effect of using what is already on screen.
+    // Before the data-action/dock-switch checks, so the close X still closes.
+    if (chatStage === 'minimized'
+      && !event.target.closest('[data-action]')
+      && !event.target.closest('.chat-dialog__close')) {
+      dispatchStage('restore', 'visitor')
+      return
+    }
     const switchEl = event.target.closest('[data-dock-switch]')
     if (switchEl && dialog.contains(switchEl)) {
       const target = switchEl.dataset.dockSwitch
@@ -1448,7 +1593,16 @@ export function initChat() {
       return
     }
     if (action === 'navigate') {
-      navigateToSection(actionEl.dataset.section || '')
+      // The return value used to be discarded here, so an assistant-rendered button for a
+      // section that did not resolve was a silent no-op: the visitor tapped and nothing
+      // happened, and neither they, nor the model, nor analytics learned it had failed
+      // (ADR-0015 §9.2 — the text path failed worse than the voice path, which at least
+      // round-tripped the error). It stays non-interrupting: a visitor who tapped a button
+      // does not need an error bubble, but the failure has to be countable.
+      const outcome = navigateToSection(actionEl.dataset.section || '')
+      if (outcome.error) {
+        trackEvent('chat_nav_unresolved', { section: String(actionEl.dataset.section || '') })
+      }
       return
     }
     if (action === 'open-contact') {
@@ -1484,18 +1638,32 @@ export function initChat() {
   // knows the action ran.
   // Move the page to a top-level section so the agent can SHOW the visitor around
   // (text and voice share this one routine). Returns a tool-response-shaped result.
-  const navigateToSection = (section) => {
-    if (section === 'home') {
-      history.replaceState(null, '', './')
-      window.dispatchEvent(new HashChangeEvent('hashchange'))
-    } else if (section === 'labs' || section === 'playground') {
-      window.location.hash = '#labs'
-    } else if (section === 'portfolio') {
-      window.location.hash = '#portfolio'
-    } else {
-      return { error: `unknown_section: ${section}` }
+  // Routing belongs to the router. This used to be a chain of byte-exact `===` plus its own
+  // URL writes, which is how two defects got in: "Portfolio" fell through to
+  // unknown_section (ADR-0015 ss9.2), and assigning the fragment the document already has
+  // dispatches no hashchange, so the section was never applied while the tool still reported
+  // `navigated` (ss9.4). js/navigation.js's requestNavigation resolves through the shared
+  // registry, moves the page, and labels the store write `agent` - which only the caller
+  // knows, since a hashchange cannot say who caused it.
+  const navigateToSection = (raw) => {
+    const target = requestNavigation(raw, { origin: 'agent' })
+    if (target.error) {
+      return { error: `unknown_section: ${raw}`, received: raw, siteState: getSiteStateForWire() }
     }
-    return { result: 'navigated', section }
+    // READ BACK, never the argument spelled twice (ADR-0015 ss5.1, invariant #21). An echo
+    // built from the request agrees with it by construction, which is precisely the property
+    // a self-verification contract must not have - and the no-op hash write (ss9.4) is the
+    // measured case where it would have lied outright.
+    //
+    // Synchronous, where the ADR specified a 250ms wait: that wait existed because the old
+    // code moved the page by assigning window.location.hash and waited for the hashchange to
+    // come back round. requestNavigation calls applySection directly, so the store is
+    // already settled here. The error case stays - that is the half #21 is about.
+    const settled = getSiteState()
+    if (settled.section !== target.id) {
+      return { error: 'navigation_did_not_apply', section: target.id, siteState: getSiteStateForWire() }
+    }
+    return { result: 'navigated', section: settled.section, siteState: getSiteStateForWire() }
   }
 
   const applyVoiceToolCall = (name, args) => {
@@ -1518,7 +1686,10 @@ export function initChat() {
             message: typeof args.message === 'string' ? args.message : '' }
         : null
       openContactFromChat(prefill)
-      return { result: 'opened_contact_form' }
+      // Same read-back: this is what proves the form OPENED, rather than that the handler
+      // was called. The whole state travels, not just the field the tool touched - the model
+      // should not have to remember where the visitor was to know where they still are.
+      return { result: 'opened_contact_form', siteState: getSiteStateForWire() }
     }
     if (name === 'navigate_to_section') {
       const section = args && typeof args.section === 'string' ? args.section : ''

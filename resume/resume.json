@@ -8,7 +8,7 @@
       "One sentence on a migration, rewrite, or platform change you led and how you de-risked it.",
       "One sentence on an operational or cost result, with a number if you have one."
     ] },
-    { "role": "Staff Engineer · APIs & Integrations", "company": "Contoso Cloud", "period": "20XX–20XX", "tech": ["Go", "gRPC", "Node.js", "PostgreSQL", "MongoDB", "GraphQL", "Docker"], "highlights": [
+    { "role": "Staff Engineer · APIs & Integrations", "company": "Contoso Cloud", "period": "20XX–20XX", "tech": ["Golang", "gRPC", "Node.js", "PostgreSQL", "MongoDB", "GraphQL", "Docker"], "highlights": [
       "One sentence on the product domain.",
       "One sentence on an integration or API you owned end to end, including its scale.",
       "One sentence on a data-modeling or schema decision and the tradeoff behind it."

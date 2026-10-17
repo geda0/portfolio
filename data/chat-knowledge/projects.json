@@ -6,7 +6,7 @@
     "why_it_matters": "One or two sentences on what this project proves about how you work — the habit or standard it demonstrates, not a repeat of the feature list.",
     "tech": [
       "Node.js",
-      "TypeScript",
+      "JavaScript",
       "Testing",
       "CI/CD"
     ],
@@ -19,9 +19,9 @@
     "relevance_tags": [
       "node.js",
       "playground",
-      "testing",
+      "ai",
       "platform architecture",
-      "typescript"
+      "java"
     ]
   },
   {
@@ -70,6 +70,7 @@
       "python",
       "embedded",
       "hardware",
+      "computer vision",
       "playground"
     ]
   },
@@ -109,7 +110,7 @@
     "summary": "Placeholder role card for a second position. Contoso Cloud — placeholder for a professional role. Keep the same problem / work / outcome shape across roles so the section reads consistently.",
     "why_it_matters": "One or two sentences on what this role demonstrates about API and data design.",
     "tech": [
-      "Go",
+      "Golang",
       "gRPC",
       "GraphQL",
       "PostgreSQL",

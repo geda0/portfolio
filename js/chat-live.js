@@ -6,6 +6,10 @@ import { trackEvent } from './analytics.js'
 import { chatBus } from './chat-bus.js'
 import { chatApiUrl } from './site-config.js'
 import { shouldRevealResumeButton } from './voice-resume-button.js'
+import { hasNavPromiseGap } from './nav-promise-gap.js'
+import { freshTurnGate, nextTurnGate, acceptsTurnOutput } from './voice-turn-gate.js'
+import { subscribe as subscribeSiteState, getSiteStateForWire, siteStateWireIfNotable } from './site-state.js'
+import { createSiteStateNotifier } from './site-state-notes.js'
 
 const INPUT_RATE = 16000
 
@@ -82,10 +86,16 @@ async function postLiveVoiceSession(postUrl, sessionId, { onRetry } = {}) {
   let lastError = null
   const maxAttempts = LIVE_SESSION_MAX_RETRIES + 1
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    // siteState rides along on the mint (ADR-0015 ss6). The voice path needs it MORE than
+    // the text path: a live session is minted once and then talks for minutes, so the
+    // system instruction is the only chance to tell it where the visitor already is. ss7
+    // keeps it current from there. Omitted when there is nothing worth saying - the server
+    // then leaves the line out rather than asserting the default.
+    const site = siteStateWireIfNotable()
     const fetchOpts = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sessionId })
+      body: JSON.stringify(site ? { sessionId, siteState: site } : { sessionId })
     }
     if (typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') {
       fetchOpts.signal = AbortSignal.timeout(LIVE_SESSION_ATTEMPT_MS)
@@ -528,6 +538,25 @@ export function bindChatLiveVoice(opts) {
   let active = false
   /** True after POST /api/live/session succeeds; ensures ws.onclose cleans partial setup. */
   let voiceSessionOpen = false
+
+  // ADR-0015 ss7: while the visitor is talking, the site keeps changing under the
+  // conversation. The session was minted with one snapshot of where they were, and without
+  // this it stays frozen at that snapshot for the whole call.
+  //
+  // Everything that touches the outside is injected, so the notifier itself has no way to
+  // end a session (invariant #20) - it is given a send and nothing else. voiceActive comes
+  // from `voiceSessionOpen` rather than the store so the gate is the socket's real state,
+  // not a flag something else might have written.
+  const siteStateNotifier = createSiteStateNotifier({
+    getWireState: () => (voiceSessionOpen ? { ...getSiteStateForWire(), voiceActive: true } : null),
+    isSessionOpen: () => voiceSessionOpen && ws != null && ws.readyState === WebSocket.OPEN,
+    send: (payload) => { ws.send(JSON.stringify(payload)) },
+    setTimer: (fn, ms) => setTimeout(fn, ms),
+    clearTimer: (id) => clearTimeout(id)
+  })
+  const unsubscribeSiteState = subscribeSiteState((_snapshot, change) => {
+    if (change) siteStateNotifier.onChange(change)
+  })
   /** True while startVoice is past UI gates (blocks overlapping starts that orphan the WebSocket). */
   let voiceConnectInFlight = false
   /** Last POST /api/live/session `liveVoiceTransport` for close-message context. */
@@ -589,6 +618,7 @@ export function bindChatLiveVoice(opts) {
   let turnAudioInBytes = 0
   let turnAudioOutBytes = 0
   let turnInterrupted = false
+  let turnGate = freshTurnGate()
   const markTurnStart = () => {
     if (!turnStartedAt) turnStartedAt = Date.now()
   }
@@ -666,6 +696,11 @@ export function bindChatLiveVoice(opts) {
     turnAudioInBytes = 0
     turnAudioOutBytes = 0
     turnInterrupted = false
+    // The gate re-opens here too, not just at turnComplete. stopVoiceInternal is the
+    // one place a session can end with a turn still cancelled, and this closure
+    // outlives the session — so without this the NEXT session starts gated shut and
+    // drops its first model turn, audio and transcript, in silence.
+    turnGate = freshTurnGate()
   }
 
   const persistVoiceTurn = (userText, assistantText, toolCalls, telemetry = {}) => {
@@ -678,7 +713,6 @@ export function bindChatLiveVoice(opts) {
       sessionId: typeof getSessionId === 'function' ? getSessionId() : null,
       userText: trimmedUser,
       assistantText: trimmedAssistant,
-      capturedAt: new Date().toISOString(),
       transport: lastLiveVoiceTransport || 'live',
       toolCalls: Array.isArray(toolCalls) ? toolCalls : [],
       intent: typeof telemetry.intent === 'string' ? telemetry.intent : sessionIntent,
@@ -718,6 +752,7 @@ export function bindChatLiveVoice(opts) {
     clearVoiceTimers()
     clearNoMicIdleTimer()
     clearWarmFollowupTimer()
+    siteStateNotifier.reset()
     voiceSessionOpen = false
     wsOpened = false
     active = false
@@ -854,6 +889,13 @@ export function bindChatLiveVoice(opts) {
     if (userBubble) finalizeBubble(userBubble, userDraft.trim())
     if (assistantBubble) finalizeBubble(assistantBubble, assistantDraft.trim())
     maybeRevealPromisedResumeButton()
+    // RECORDED, NEVER ACTED ON (ADR-0015 ss5.2). The alternative - navigating on the
+    // strength of the model's prose - was rejected: a wrong reveal is a redundant button, a
+    // wrong navigation hijacks someone mid-paragraph. If this number turns out non-trivial
+    // on real traffic, THAT is the evidence for revisiting it.
+    if (hasNavPromiseGap(assistantDraft, turnToolCalls)) {
+      trackEvent('chat_nav_promise_gap', { modality: 'voice' })
+    }
     // Fire-and-forget persist before clearing drafts. Mirrors the text-chat
     // persistence path so the admin panel sees voice turns alongside text turns.
     persistVoiceTurn(userDraft, assistantDraft, turnToolCalls, {
@@ -894,6 +936,9 @@ export function bindChatLiveVoice(opts) {
     if (setupPayload != null && setupPayload !== false) {
       setupDone = true
       voiceUnavailableOnHost = false
+      // A NEW session has been told nothing, so the dedupe memory starts empty - otherwise
+      // the first note of this call is swallowed because the last call already said it.
+      siteStateNotifier.reset()
       patchLiveUi({ sessionOpen: true })
       if (pendingSetupLatch) {
         if (pendingSetupLatch.timeoutId != null) clearTimeout(pendingSetupLatch.timeoutId)
@@ -911,12 +956,13 @@ export function bindChatLiveVoice(opts) {
       userSpokeAfterGreeting = true
       clearWarmFollowupTimer()
     }
-    if (rootOut) patchAssistantText(rootOut)
+    if (rootOut && acceptsTurnOutput(turnGate)) patchAssistantText(rootOut)
 
     const sc = msg.serverContent || msg.server_content
     if (sc) {
       if (sc.interrupted) {
         turnInterrupted = true
+        turnGate = nextTurnGate(turnGate, 'interrupted')
         player?.interrupt()
       }
 
@@ -925,7 +971,7 @@ export function bindChatLiveVoice(opts) {
         userSpokeAfterGreeting = true
         clearWarmFollowupTimer()
       }
-      if (sc.outputTranscription?.text) patchAssistantText(sc.outputTranscription.text)
+      if (sc.outputTranscription?.text && acceptsTurnOutput(turnGate)) patchAssistantText(sc.outputTranscription.text)
 
       const parts = sc.modelTurn?.parts
       if (Array.isArray(parts)) {
@@ -933,18 +979,19 @@ export function bindChatLiveVoice(opts) {
           const inline = part.inlineData || part.inline_data
           const mime = inline?.mimeType || inline?.mime_type || ''
           const data = inline?.data
-          if (mime.includes('audio/pcm') && data && player) {
+          if (mime.includes('audio/pcm') && data && player && acceptsTurnOutput(turnGate)) {
             // Approximate decoded byte count from the base64 string length
             // (~3 bytes per 4 base64 chars). Cheap, off by a few bytes at most.
             turnAudioOutBytes += Math.floor((String(data).length * 3) / 4)
             const { floats, rate } = decodePcmBase64(data, mime)
             player.enqueue(floats, rate).catch(() => {})
           }
-          if (part.text) patchAssistantText(part.text)
+          if (part.text && acceptsTurnOutput(turnGate)) patchAssistantText(part.text)
         }
       }
 
       if (sc.turnComplete || sc.turn_complete) {
+        turnGate = nextTurnGate(turnGate, 'turnComplete')
         finalizeTurn()
         // First turnComplete after the greeting = the greeting finished playing.
         // For warm sessions where the visitor hasn't spoken yet, schedule the
@@ -1415,6 +1462,10 @@ export function bindChatLiveVoice(opts) {
       delete btn.dataset.portfolioChatLiveVoice
       btn.removeEventListener('click', onMicClick)
     }
+    // The store is a module singleton that outlives this binding, so a subscription left
+    // behind here keeps a dead session's notifier alive for the rest of the page — and, in
+    // a test file where each case boots its own chat, for the rest of the file.
+    unsubscribeSiteState()
     stopVoiceInternal({ silent: true })
   }
 

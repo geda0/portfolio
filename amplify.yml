@@ -6,18 +6,34 @@
 # backends. The 2026-06-04 incident (a fast-forward of `agent` -> `main` that silently
 # carried the STAGING API hosts onto production) is what this preBuild guard exists to catch.
 #
-# IMPORTANT (dev-ops): set PORTFOLIO_EXPECTED_ENV per Amplify app in the Amplify console env vars:
-#   - the PROD    app must set  PORTFOLIO_EXPECTED_ENV=prod   (serves main, prod hosts)
-#   - the STAGING app must set  PORTFOLIO_EXPECTED_ENV=stage  (serves agent, staging hosts)
-# The guard below uses that PER-APP value (never a hardcoded environment), so the build FAILS
-# (non-zero exit) whenever the committed HTML hosts don't match the app's environment.
+# SELF-ARMING since 2026-10-14. The guard resolves its target environment from, in order:
+#   1. PORTFOLIO_EXPECTED_ENV  — explicit, wins when set (the deploy workflows set it)
+#   2. GITHUB_REF_NAME   — GitHub Actions
+#   3. AWS_BRANCH        — Amplify's own build variable: main -> prod, agent -> stage
+# Amplify always provides AWS_BRANCH, so nothing NEEDS configuring in the console.
+#
+# Belt and braces: PORTFOLIO_EXPECTED_ENV is also set explicitly, PER BRANCH, as of 2026-10-14:
+#   portfolio /agent  = stage        home/agent = stage        home/main = prod
+# Per BRANCH and not per APP on purpose — the `home` app serves main (prod) AND agent
+# (chat./ai., stage), so a single app-level value would be wrong for one of them, and since
+# the explicit value WINS over branch inference it would fail that branch's builds. Verified
+# after setting: all three branches rebuilt SUCCEED and every live site serves its own hosts.
+#
+# This used to depend on PORTFOLIO_EXPECTED_ENV alone, and that variable was measured UNSET on every
+# Amplify app and branch — so the guard resolved nothing and SKIPPED on every build it ever ran
+# in. It was decoration. The miss was real: on 2026-10-14 a main->agent merge carried PROD hosts
+# onto the staging branch and three consecutive stage builds reported SUCCEED.
+#
+# Setting PORTFOLIO_EXPECTED_ENV in the console is still supported and still wins, but it is no longer
+# REQUIRED. Do not reduce this back to a variable someone has to remember.
 version: 1
 frontend:
   phases:
     preBuild:
       commands:
-        # Fail the build if the shipped API hosts don't match this app's PORTFOLIO_EXPECTED_ENV.
-        - PORTFOLIO_EXPECTED_ENV=$PORTFOLIO_EXPECTED_ENV node --test test/frontend-api-url-env-guard.test.mjs
+        # Fail the build if the shipped API hosts don't match this branch's environment.
+        # Arms from PORTFOLIO_EXPECTED_ENV if set, else AWS_BRANCH (always present on Amplify).
+        - node --test test/frontend-api-url-env-guard.test.mjs
     build:
       commands: []
   artifacts:

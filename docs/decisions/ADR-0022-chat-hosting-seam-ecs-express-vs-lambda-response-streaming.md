@@ -101,7 +101,7 @@ services and let the shared ALB go with them.
 
 Today neither half exists: there is **no LWA anywhere in the repo** (grep for
 `lambda-web-adapter` / `AWS_LWA` returns nothing; `docker/chat/requirements.txt:5` pins
-`mangum==0.19.0`), and **no Function URL** — `aws/chglobex-mediaemplate.yaml:62-70,102-110` fronts the
+`mangum==0.19.0`), and **no Function URL** — `aws/chat-template.yaml:62-70,102-110` fronts the
 function with an `AWS::Serverless::HttpApi`, not a Function URL. So the proposal is net-new
 infrastructure work, not a flag flip.
 
@@ -163,7 +163,7 @@ not an opinion. None has been taken; all are **OPEN**.
   cited `docker/chat/Dockerfile:11` (dev deps + `tests/` in the runtime image) and ADR-0007's
   **~100 s** cold start. **Both citations were wrong for this measurement.** `docker/chat/Dockerfile`
   builds the **ECS** image; the Lambda image is `docker/chat/Dockerfile.lambda`
-  (`aws/chglobex-mediaemplate.yaml:73-75`), which installs only `requirements-lambda.txt`, no dev deps and
+  (`aws/chat-template.yaml:73-75`), which installs only `requirements-lambda.txt`, no dev deps and
   no `tests/`. And **LangChain is already gone** from both requirements files
   (`docker/chat/app/messages.py:1` is its dependency-free replacement) — so the ~100 s figure
   measured an image that no longer exists. The real risk was never image weight; it was unmeasured.
@@ -202,7 +202,7 @@ not an opinion. None has been taken; all are **OPEN**.
   swapped back to Express. That would falsify the core premise and must be recorded here before
   anything is deleted.
 - **Caveat to respect while measuring:** `aws/chat-express-template.yaml:161` sets
-  `GEMINI_LIVE_MINT_TIMEOUT_SEC: '50'` on ECS, while `aws/chglobex-mediaemplate.yaml:56` gives the Lambda
+  `GEMINI_LIVE_MINT_TIMEOUT_SEC: '50'` on ECS, while `aws/chat-template.yaml:56` gives the Lambda
   a **60 s** total timeout. A 50 s mint budget inside a 60 s invocation leaves almost no headroom
   on a cold start; the mint timeout must be re-tuned for Lambda or M-3 will fail for a timeout
   reason unrelated to 1011.
@@ -211,7 +211,7 @@ not an opinion. None has been taken; all are **OPEN**.
 
 ECS Express is a **fixed** bill; Lambda is **metered**. Today the Express host has **no throttle
 in front of it at all** — recorded at `docs/tdd/project-invariants.md:588-590` — whereas the
-Lambda stack's HttpApi throttles to **5 rps / burst 10** (`aws/chglobex-mediaemplate.yaml:67-69`). **A
+Lambda stack's HttpApi throttles to **5 rps / burst 10** (`aws/chat-template.yaml:67-69`). **A
 Function URL has no API Gateway, so migrating to one DISCARDS that throttle.** The combination of
 an unthrottled public endpoint, per-invocation billing, and a paid upstream model is a
 cost-amplification path that the current fixed-price host does not have.
@@ -307,7 +307,7 @@ does not break on a host swap** provided the meta is updated — contrary to the
   `docker/chat/README.md:70`. No script or template reads it. Deleting ECS invalidates **docs**,
   not behaviour.
 - **`CHAT_LIVE_RELAY` is read nowhere in the application.** It persists only as a set-but-unread
-  value at `aws/chglobex-mediaemplate.yaml:95` (and its description at `:146`). `CHAT_LIVE_VOICE_STRICT`
+  value at `aws/chat-template.yaml:95` (and its description at `:146`). `CHAT_LIVE_VOICE_STRICT`
   is likewise read nowhere. The `docker/chat/Dockerfile` does **not** set `CHAT_LIVE_RELAY=1`,
   despite `README.md:51` claiming it does.
 - **The `/health` `liveRelay` field does not exist.** `docker/chat/app/main.py:462-464` returns
@@ -392,7 +392,7 @@ Dead code whose comments actively misinform about the voice/host relationship:
 3. `js/chat-live.js:1030` — `isRelayWsPath` is permanently `false`; the relay-only branches it
    guards (`:1048, 1063, 1075, 1087, 1109, 1139`, plus `voiceRelayCloseUserMessage` and
    `liveSetupTimeoutMessage`'s relay arm at `:218-223`) are dead.
-4. `aws/chglobex-mediaemplate.yaml:95` — sets `CHAT_LIVE_RELAY: '0'`, which no code reads.
+4. `aws/chat-template.yaml:95` — sets `CHAT_LIVE_RELAY: '0'`, which no code reads.
 5. `scripts/integrate-and-deploy.sh:360-367` — `CHAT_EXPRESS_URL` computed then discarded;
    `CLUSTER=""` / `SERVICE=""` dead.
 6. `docker/chat/Dockerfile:11,17-18` — installs `requirements-dev.txt` and copies `pytest.ini` +
@@ -579,7 +579,7 @@ Three separate errors in one bullet:
 
 1. **Wrong Dockerfile.** `docker/chat/Dockerfile` (dev deps at `:11`, `pytest.ini` + `tests/` at
    `:17-18`) is the **ECS** image. The Lambda image is **`docker/chat/Dockerfile.lambda`**, declared
-   at `aws/chglobex-mediaemplate.yaml:72-74`; it installs only `requirements-lambda.txt`, no dev
+   at `aws/chat-template.yaml:72-74`; it installs only `requirements-lambda.txt`, no dev
    dependencies, and copies **no** tests. The fat-image concern was never about the Lambda image.
 2. **LangChain is already gone.** Neither `docker/chat/requirements.txt` nor
    `requirements-lambda.txt` contains any `langchain*` or `rank-bm25`; no module under
@@ -606,7 +606,7 @@ configures a custom domain. The indirection layer has to terminate TLS for our n
 §4/M-3 presented `GEMINI_LIVE_MINT_TIMEOUT_SEC: '50'` as an ECS setting
 (`aws/chat-express-template.yaml:161`). The **code default is also 50** —
 `docker/chat/app/main.py:1068`. The existing Lambda stack sets the env nowhere and has
-`Timeout: 60` (`aws/chglobex-mediaemplate.yaml:56`), so it already runs a 50 s mint budget inside a 60 s
+`Timeout: 60` (`aws/chat-template.yaml:56`), so it already runs a 50 s mint budget inside a 60 s
 invocation **today, by default**. Filed as §22.5.
 
 ## 15. DECISION 1 — Function URL. There is no API Gateway option.
@@ -630,7 +630,7 @@ Two further constraints point the same way, and one of them is a live defect:
 
 - API Gateway's integration timeout is **29–30 s**. The deep probe's `SMOKE_LIVE_TIMEOUT` default is
   **25 s** (`main.py:714-715`) with a 30 s inner `recv` (`live_gemini.py:277-290`). **The existing
-  `chglobex-mediaemplate.yaml` stack therefore cannot reliably complete `GET /api/chat/smoke?deep=1`
+  `chat-template.yaml` stack therefore cannot reliably complete `GET /api/chat/smoke?deep=1`
   today** — filed §22.6. A Function URL carries the function's full timeout and removes this cap.
 - Function URLs support up to the function timeout, so §18.D3's `Timeout: 90` is available.
 
@@ -644,7 +644,7 @@ Two further constraints point the same way, and one of them is a live defect:
   `Access-Control-Allow-*`, which duplicates the app's headers; browsers reject a response carrying
   two `Access-Control-Allow-Origin` values. **One owner for CORS, and it stays the app** — the same
   arrangement ECS has, which also keeps the stage comparison like-for-like. §18.A4 pins it.
-- **No API Gateway in the new stack.** `chglobex-mediaemplate.yaml`'s throttled HttpApi stays deployed and
+- **No API Gateway in the new stack.** `chat-template.yaml`'s throttled HttpApi stays deployed and
   untouched as a zero-cost buffered fallback (§16).
 
 **Rejected alternatives, for the record:** (a) split the origin — HttpApi for everything, Function
@@ -654,7 +654,7 @@ and the streaming route is the expensive one, so it throttles nothing that matte
 
 ### 15.3 M-4, made concrete — and an honest statement of what reserved concurrency does *not* bound
 
-Arithmetic at the inherited `MemorySize: 1536` (`aws/chglobex-mediaemplate.yaml:58`), x86, $0.0000166667
+Arithmetic at the inherited `MemorySize: 1536` (`aws/chat-template.yaml:58`), x86, $0.0000166667
 per GB-s → **$0.000025 per second**:
 
 - **Per turn:** ~1.5 s billed at the measured 1234 ms last-chunk → **~$0.00004**. A thousand turns a
@@ -707,7 +707,7 @@ drops below the saving and the cost argument stops being delicate.
 **Agreed with the proposal: a new file, `aws/chat-stream-template.yaml`, deployed as its own stack
 (`portfolio-chat-stream-stage`).** Reasons, in order: it cannot disturb the running Express services; a
 CFN stack boundary is the cheapest blast-radius fence available for an experiment that may be
-deleted; `sam delete` removes the whole thing; and it leaves `chglobex-mediaemplate.yaml`'s **throttled**
+deleted; `sam delete` removes the whole thing; and it leaves `chat-template.yaml`'s **throttled**
 HttpApi stack alive as a zero-cost rollback target — which is strictly better than editing it, since
 editing it would mean mutating the fallback during the migration that depends on it.
 
@@ -719,15 +719,15 @@ Do not touch the `express` branch while both hosts run.
 benefit, and it is not an acceptable reason to prefer the new file.** The new template carries
 `GeminiApiKey` (NoEcho) and *defines the public internet-facing surface of the chat* — that is
 exactly what the gate exists for. The same change must extend `SECURITY_GLOB`
-(`.claude/tdd.config:63`) from `(^|/)aws/(template|chglobex-mediaemplate)\.yaml` to
+(`.claude/tdd.config:63`) from `(^|/)aws/(template|chat-template)\.yaml` to
 **`(^|/)aws/[^/]*template\.yaml`**, which also closes a pre-existing hole:
 `aws/chat-express-template.yaml` is ungated today while carrying **three** NoEcho secrets
 (`:20-24`, `:32-35`, `:49-53`) — §22.1. The edit only ever adds gating, so it cannot loosen the
 harness; it is nevertheless a `.claude/tdd.config` change and therefore **the owner's to make, not
 the architect's and not the loop's**. Recorded here as a requirement of the slice.
 
-**Replace or supersede `chglobex-mediaemplate.yaml`? Not decided now, deliberately.** The default answer
-when it comes due: keep `chglobex-mediaemplate.yaml` deployed and buffered for one full observation window
+**Replace or supersede `chat-template.yaml`? Not decided now, deliberately.** The default answer
+when it comes due: keep `chat-template.yaml` deployed and buffered for one full observation window
 after the prod cutover, then retire it in its own change. Removing two hosting paths in one change
 deletes the rollback you are relying on.
 
@@ -900,7 +900,7 @@ requests through CloudFront + OAC; the per-item status of everything below is ta
   result of §13.2 depends on it, and a re-added heavy dependency silently invalidates M-2.
 
 ### G. Environment parity — otherwise the comparison is not like-for-like
-`aws/chat-express-template.yaml:159-176` sets env that `aws/chglobex-mediaemplate.yaml:87-99` does **not**.
+`aws/chat-express-template.yaml:159-176` sets env that `aws/chat-template.yaml:87-99` does **not**.
 The new template must set it, or stage measures a differently-configured application and the alert
 path dies silently on the new host:
 - **G1** Required: `CHAT_ENV` (read at `alerts.py:99`), `RESEND_API_KEY`, `CHAT_ALERT_EMAIL`,
@@ -912,7 +912,7 @@ path dies silently on the new host:
   application (§9.4). Carrying them forward propagates the §8 documentation defect into new
   infrastructure.
 - **G3** IAM: `dynamodb:PutItem` + `dynamodb:UpdateItem` on that table and nothing else — mirror
-  `aws/chglobex-mediaemplate.yaml:76-86` / the Express `TaskRole` at `:123-142` (verified).
+  `aws/chat-template.yaml:76-86` / the Express `TaskRole` at `:123-142` (verified).
 - **G4** `AWS_REGION` is supplied by the Lambda runtime; do not set it (the Express template must,
   which is why it appears there).
 
@@ -985,9 +985,9 @@ despite the chat host reporting persistence success").
 **Decided:** add **`docker/chat/requirements-lwa.txt`** = `-r requirements-lambda.txt` **+
 `boto3==1.35.86`** (same pin as `requirements.txt:14`), carrying a comment that points at this
 section. Do **not** add `boto3` to `requirements-lambda.txt` — that would pin a boto3 over the
-managed runtime's inside `chglobex-mediaemplate.yaml`'s image, changing the fallback stack that is not under
+managed runtime's inside `chat-template.yaml`'s image, changing the fallback stack that is not under
 test. (`mangum` rides along via `-r` and is unused on the LWA path; harmless, and still needed by
-`chglobex-mediaemplate.yaml`. Dropping it is a later slimming option, not a gate.)
+`chat-template.yaml`. Dropping it is a later slimming option, not a gate.)
 
 ### 20.2 The failure mode is silent and lazy — not "raises at startup"
 Precisely: `transcript_store._get_table` (`docker/chat/app/transcript_store.py:45-55`) catches the
@@ -1071,11 +1071,11 @@ cleanup.
 4. `main.py:511-513` comment claims `disabled=true` means "boto3 import failed **at startup**" — the
    check is lazy, at first write (§20.2). The comment is the reason the check gets read too early.
 5. **`GEMINI_LIVE_MINT_TIMEOUT_SEC` defaults to `50` in code** (`main.py:1068`), and
-   `aws/chglobex-mediaemplate.yaml` sets it nowhere while giving the function `Timeout: 60` (`:56`). The
+   `aws/chat-template.yaml` sets it nowhere while giving the function `Timeout: 60` (`:56`). The
    existing Lambda stack therefore already runs a 50 s mint budget inside a 60 s invocation.
 6. **The existing Lambda stack cannot reliably complete the deep probe.** API Gateway's integration
    timeout is 29–30 s; `SMOKE_LIVE_TIMEOUT` defaults to 25 s (`main.py:714-715`) with a 30 s inner
-   `recv` (`live_gemini.py:277-290`). `aws/chglobex-mediaemplate.yaml`'s HttpApi caps it below the probe's
+   `recv` (`live_gemini.py:277-290`). `aws/chat-template.yaml`'s HttpApi caps it below the probe's
    own budget.
 7. Invariant 11's implementation references are stale for the chat meta: the prose cites
    `index.html:38-39` + `admin/index.html:14`; the chat meta is `index.html:48` /
@@ -1169,14 +1169,14 @@ Everything else in both files matches. These do not:
 |---|---|---|---|
 | 1 | `chat-stream-template.yaml:127` | `Timeout: 60` | **`Timeout: 90`** — §18.D3. 60 cannot hold a 25 s deep probe plus a cold start plus the mint, and that is already a live defect on the HttpApi stack (§22.6). |
 | 2 | `chat-stream-template.yaml:131-139` | Env set is missing the parity items | Add **`GEMINI_LIVE_MINT_TIMEOUT_SEC: '15'`** (code default is **50** — §14.4), **`CHAT_ENV`** (read at `alerts.py:99`), **`RESEND_API_KEY`**, **`CHAT_ALERT_EMAIL`**, **`CHAT_ALERT_FROM_EMAIL`**, **`CHAT_ALERT_COOLDOWN_SECONDS`**, **`SMOKE_PROBE_KEY`**, **`CHAT_READY_VERBOSE: '1'`** (stage — §18.C2 depends on it), **`CHAT_VOICE_MODEL`**. §18.G1. Without them the alert path dies silently on the new host and the stage comparison is not like-for-like. |
-| 3 | `chat-stream-template.yaml` | No alarms, no SNS topic | Add the **three** alarms of §15.3 (invocations 2,000/5 min; invocations 20,000/1 h; duration-sum 1.8e6 ms/1 h) + an SNS email topic, following the `ChatErrorTopic` + `ChatLambdaErrorsAlarm` pattern at `aws/chglobex-mediaemplate.yaml:114-140`. §18.E2. **This is the M-4 gate** — it is the item most likely to be deferred and must not be. |
+| 3 | `chat-stream-template.yaml` | No alarms, no SNS topic | Add the **three** alarms of §15.3 (invocations 2,000/5 min; invocations 20,000/1 h; duration-sum 1.8e6 ms/1 h) + an SNS email topic, following the `ChatErrorTopic` + `ChatLambdaErrorsAlarm` pattern at `aws/chat-template.yaml:114-140`. §18.E2. **This is the M-4 gate** — it is the item most likely to be deferred and must not be. |
 | 4 | `chat-stream-template.yaml:47-50` | `FunctionUrlAuthType` `Default: NONE` | **`Default: AWS_IAM`** — §23.1.4. The default should be the value that works. |
 | 5 | `Dockerfile.lambda-stream:35-40` | No `AWS_LWA_READINESS_CHECK_PATH` | Add **`AWS_LWA_READINESS_CHECK_PATH=/health`**. LWA's default is `/`, and this app has **no `/` route** (`main.py` has only `/health:462`, `/ready:550`) — the default probes a 404. §20.3. |
 | 6 | `Dockerfile.lambda-stream:20-23` | Comment repeats the stale **~100 s** figure and attributes it to image weight | **Correct or delete the comment** — §14.2 shows that figure described a LangChain-bearing image this tree can no longer build, and that `Dockerfile.lambda` was never the fat one. Leaving it propagates the exact defect §8 is about, into new code. |
 | 7 | `Dockerfile.lambda-stream:29` | `pip install -r requirements-lambda.txt boto3==1.35.86` (inline) rather than a `requirements-lwa.txt` | **Accepted as-is** — it pins the same version with the same explanation and avoids a fourth requirements file. §20.1 is amended: the inline pin is the chosen form, **provided the comment at `:25-28` stays**; it is the only thing standing between this image and the silent-persistence bug. |
 
 Not deltas, and worth naming as correct: both files are **side-by-side by construction** (new stack,
-new image, no `chglobex-mediaemplate.yaml` / `chat-express-template.yaml` edit, committed meta untouched);
+new image, no `chat-template.yaml` / `chat-express-template.yaml` edit, committed meta untouched);
 the Function URL carries **no `Cors` block** with the reason recorded at `:156-162` (§15.2); the
 execution role is a single-table `PutItem`/`UpdateItem` (§18.G3); and the permission and URL are both
 unqualified `$LATEST` with §19's hypothesis-2 noted at `:146-149`.
@@ -1200,7 +1200,7 @@ template arrives gated rather than being added to the gate later.
 10. The **account Lambda concurrency limit of 10 is shared with the contact stack** (§23.2) and is
     recorded nowhere in `docs/tdd/project-invariants.md`. It is a genuine cross-feature coupling —
     chat abuse can starve the contact form — and it exists **today**, independently of this ADR,
-    because `aws/chglobex-mediaemplate.yaml` sets no reserved concurrency either. Worth an invariant once the
+    because `aws/chat-template.yaml` sets no reserved concurrency either. Worth an invariant once the
     quota is raised and reservations are set, and worth a sentence in `docs/architecture.md` now.
 
 ---
@@ -1448,7 +1448,7 @@ belong on the buffered origin. `POST /api/chat/` simply does not match it, and f
 
 **What the fall-through actually does — worse than "loses streaming"** (derived from config and
 code, not measured; one `curl -i -X POST <dist>/api/chat/` and a glance at `Location` confirms it):
-the default origin's `/{proxy+}` ANY route (`aws/chglobex-mediaemplate.yaml:104-109`) reaches FastAPI,
+the default origin's `/{proxy+}` ANY route (`aws/chat-template.yaml:104-109`) reaches FastAPI,
 whose `redirect_slashes` answers **307** with an **absolute** `Location` built from the `Host`
 header — and under `AllViewerExceptHostHeader` that Host is the **origin's**, so the browser is
 redirected to the raw `*.execute-api.*.amazonaws.com` host. `fetch` follows a 307 with method and
@@ -1523,7 +1523,7 @@ emitted by anything in `js/`).
 ### 24.8 Governance — unresolved, and the owner's
 
 **Three** chat templates now sit outside `SECURITY_GLOB` (`.claude/tdd.config:63`, which matches
-only `(^|/)aws/(template|chglobex-mediaemplate)\.yaml`):
+only `(^|/)aws/(template|chat-template)\.yaml`):
 
 - `aws/chat-stream-template.yaml` — `GeminiApiKey` (NoEcho); defines the function and its URL.
 - `aws/chat-stream-cdn-template.yaml` — **new with the gate**; defines the **public front door**
@@ -1641,7 +1641,7 @@ trust:**
   `transcript_store.py:180,186` (shipped this session as M0 A3.1/A3.2, ADR-0020 §5.13). The
   finding's count is exact.
 - Env actually passed, counted: `aws/chat-express-template.yaml:160-176` = **17** vars including all
-  the alert names and `CHAT_ENV`; `aws/chglobex-mediaemplate.yaml:89-99` = **11**, none alert-related, no
+  the alert names and `CHAT_ENV`; `aws/chat-template.yaml:89-99` = **11**, none alert-related, no
   `CHAT_ENV`; `aws/chat-stream-template.yaml:146-153` = **7**, none alert-related, no `CHAT_ENV`, no
   `CHAT_VOICE_MODEL`, no `SMOKE_PROBE_KEY`.
 - `httpx==0.28.1` is in **both** `docker/chat/requirements.txt` and `requirements-lambda.txt`, so
@@ -2143,7 +2143,7 @@ this test" rather than "legitimate", or the next reader will take it as the pari
 
 **Misattribution to fix, because a test written from the draft list would assert the wrong thing:**
 `CHAT_LIVE_RELAY` and `CHAT_LIVE_VOICE_STRICT` are **not** Express vars. They appear **nowhere** in
-`aws/chat-express-template.yaml`. They are set only by `aws/chglobex-mediaemplate.yaml:95-96`. So they are
+`aws/chat-express-template.yaml`. They are set only by `aws/chat-template.yaml:95-96`. So they are
 not "Express vars that must not be copied forward" — they are **vars the HttpApi template sets that
 must be DELETED there** (§18.G2 already owes it) and never added anywhere. Exclusion and deletion
 are the same decision.
@@ -2184,12 +2184,12 @@ and a test that asserts them becomes a secret-shaped liability.
 
 | Template | Change required | On `SECURITY_GLOB`? | Clearance? |
 |---|---|---|---|
-| `aws/chat-stream-template.yaml` | **Yes** — the gate now; List 2's 16-var set plus §23.3 deltas 1 and 3 later | **No** — verified: the ERE at `.claude/tdd.config:63` is `(^\|/)aws/(template\|chglobex-mediaemplate)\.yaml`, which does not match `chat-stream-template.yaml` | **No** — proceed |
+| `aws/chat-stream-template.yaml` | **Yes** — the gate now; List 2's 16-var set plus §23.3 deltas 1 and 3 later | **No** — verified: the ERE at `.claude/tdd.config:63` is `(^\|/)aws/(template\|chat-template)\.yaml`, which does not match `chat-stream-template.yaml` | **No** — proceed |
 | `aws/chat-express-template.yaml` | No env change — it is the reference host | **No** — same verification | **No** |
-| `aws/chglobex-mediaemplate.yaml` | **Yes** — the gate now; the §18.G2 deletions later | **YES** — it matches | **YES — issued** |
+| `aws/chat-template.yaml` | **Yes** — the gate now; the §18.G2 deletions later | **YES** — it matches | **YES — issued** |
 | `aws/chat-stream-cdn-template.yaml` | None for this decision (invariant 18's rewrite is separate, §24.7) | **No** | **No** |
 
-**Why `aws/chglobex-mediaemplate.yaml` is in scope for *this* roll and not a pre-existing gap to defer:**
+**Why `aws/chat-template.yaml` is in scope for *this* roll and not a pre-existing gap to defer:**
 under the shipped CloudFront shape its Lambda is the **default origin**, making it the host for the
 paid voice mint, the smoke probes, and the trailing-slash chat fall-through. It goes from "the legacy
 stack nobody points at" to "a production-serving host", and §25.2(i) is precisely the mistake of
@@ -2205,7 +2205,7 @@ configuring one host and not the other.
   clearance is part of the audit trail.* `ResendApiKey` **5** lines (mirrors
   `chat-express-template.yaml:49-53`, `NoEcho` included), `ChatAlertEmail` **4** (mirrors `:54-57`),
   `ChatAlertFromEmail` **4** (mirrors `:58-61`) = **13**. Plus `StageName` **5** *only if* `CHAT_ENV`
-  is in the slice — verified that `aws/chglobex-mediaemplate.yaml` has **no** stage parameter today (its nine
+  is in the slice — verified that `aws/chat-template.yaml` has **no** stage parameter today (its nine
   are at `:6,10,16,21,27,32,36,40,44`) = **18**.
 - **(B) Environment block `:89-99`** (`Environment:` `:87`, `Variables:` `:88`): add
   `RESEND_API_KEY`, `CHAT_ALERT_EMAIL`, `CHAT_ALERT_FROM_EMAIL` = **3** lines; **+1** for
@@ -2326,13 +2326,13 @@ template deploy. Filed as drift item 18 (§28).
 **No, and the distinction matters because G is about to be used as a release gate.**
 
 - **G1 (required env present)** — closes when List 2's set lands on **both**
-  `aws/chat-stream-template.yaml` and `aws/chglobex-mediaemplate.yaml`. The gate slice (§25.6) closes the
+  `aws/chat-stream-template.yaml` and `aws/chat-template.yaml`. The gate slice (§25.6) closes the
   three names that matter most; it does **not** close G1. §18.G1's own list is also short by one — it
   omits `CHAT_VOICE_MODEL` (§23.3 delta 2). **Use §25.5 List 2's 16-name set as the authority; it is
   the counted one.**
 - **G2 (must not be set)** — **not** closeable by the stream template alone. The stream template
   already complies (it never had the two dead vars). The **violation lives at
-  `aws/chglobex-mediaemplate.yaml:95-96`**, which still sets both. G2 closes when those two lines are
+  `aws/chat-template.yaml:95-96`**, which still sets both. G2 closes when those two lines are
   deleted — explicitly *not* in the gate slice, so G2 remains open after it.
 - **G3 (IAM: `PutItem`/`UpdateItem` on one table ARN)** — **already satisfied** on the stream
   template (`:106-115`, verified; §23.3 names it correct). Nothing owed.
@@ -2587,7 +2587,7 @@ sections so there stays exactly one drift list in this ADR.*
     against it (§29.4). Smallest sufficient fix: log a hash or a character-class-restricted slice
     instead of the raw value; or drop the line, since it carries no diagnostic the response does not.
     `main.py` **IS** on `SECURITY_GLOB`, so this one needs its own clearance — do not fold it into
-    the §29.7 clearance, which is scoped to `aws/chglobex-mediaemplate.yaml` only.
+    the §29.7 clearance, which is scoped to `aws/chat-template.yaml` only.
     **RULED 2026-10-07 — DECISION 9 (§30.1): fixed at the IDENTITY, not at the log site, and the
     clearance is §30.4.** The "smallest sufficient fix" proposed in this item (a hash or a
     character-class-restricted slice *at the log site*) is **rejected**: §30.2's AST sweep found the
@@ -2873,7 +2873,7 @@ therefore to make the second step mechanical rather than remembered:
   ever proves insufficient, the right answer is a `logs:StartQuery` from a **synchronous** context,
   not another detached task.
 
-**Topic — REUSE `ChatErrorTopic` in `aws/chglobex-mediaemplate.yaml`; the stream stack gets its own. Do NOT
+**Topic — REUSE `ChatErrorTopic` in `aws/chat-template.yaml`; the stream stack gets its own. Do NOT
 rename the logical ID.** Three reasons, the second of which is measured and decisive:
 
 1. **A topic is a destination, not a signal.** The critic's blindness critique is accepted in full,
@@ -2989,13 +2989,13 @@ short form:
 ### 29.7 The authorized edit — exact blocks, counted, and the SECURITY CLEARANCE
 
 Two files change. **`aws/chat-stream-template.yaml` is NOT on `SECURITY_GLOB`** (verified against
-`.claude/tdd.config:63`, whose ERE lists `aws/(template|chglobex-mediaemplate)\.yaml` only) — it needs no
+`.claude/tdd.config:63`, whose ERE lists `aws/(template|chat-template)\.yaml` only) — it needs no
 clearance and is not covered by the one below. It needs the same four resources with
 `/portfolio/chat-stream/${StageName}`, `ChatAlertLines-stream-${StageName}`, its own `ChatStreamAlertTopic`
 (§29.4) and a `ChatAlertAlarmEmail` parameter, since it has no topic, no alarm and no alarm-email
 parameter today.
 
-**`aws/chglobex-mediaemplate.yaml` IS on `SECURITY_GLOB`.** The blocks below are the authorized edit, written
+**`aws/chat-template.yaml` IS on `SECURITY_GLOB`.** The blocks below are the authorized edit, written
 out so the count is verifiable rather than asserted — the line budget is a count of this text.
 
 **Block 1 — INSERT at line 88, immediately before `  ChatFunction:`. 14 lines (8 comment + 5 YAML + 1 trailing blank).**
@@ -3089,7 +3089,7 @@ complete, queryable Tier-1 record — a strictly better degraded state than toda
 
 > ## SECURITY CLEARANCE — granted 2026-10-07, ADR-0022 DECISION 8
 >
-> - **File:** `aws/chglobex-mediaemplate.yaml` (on `SECURITY_GLOB` via `(^|/)aws/(template|chglobex-mediaemplate)\.yaml`).
+> - **File:** `aws/chat-template.yaml` (on `SECURITY_GLOB` via `(^|/)aws/(template|chat-template)\.yaml`).
 >   **This clearance covers that file and nothing else.**
 > - **Insertion points:** line **88** (before `  ChatFunction:`); after line **94**
 >   (`      PackageType: Image`); after line **161** (`        - !Ref ChatErrorTopic`). File is 173
@@ -3487,7 +3487,7 @@ time, so the order is fine and must not be "fixed" by moving anything.
 >      per-sink maintenance this decision exists to avoid.
 > - **Explicitly NOT cleared by this:** restructuring the Tier-1 line's fields (§30.3a / item 31);
 >   any change to `alerts.py:97`; a helper in `turn_input.py`; `aws/template.yaml`;
->   `aws/chglobex-mediaemplate.yaml` (that was §29.7's window, now closed); anything in `aws/src/`;
+>   `aws/chat-template.yaml` (that was §29.7's window, now closed); anything in `aws/src/`;
 >   `lambda_handler.py`, `live_env.py`, `live_gemini.py`.
 > - **The three existing tests stay green and must not be edited:**
 >   `test_api.py::test_over_long_session_id_is_rejected_and_persists_nothing`, its
@@ -3588,7 +3588,7 @@ The experiment stands and is not refuted. But the case against (A) was argued on
   import, is an unbounded risk taken to save one line. Refused on that alone.
 - **Considered and not chosen: (C) set the level at the runtime** (`AWS_LAMBDA_LOG_LEVEL` /
   `LoggingConfig.ApplicationLogLevel`). **Not measured, and not needed.** It fixes one host, leaves
-  every other host latent, costs a second gated file (`aws/chglobex-mediaemplate.yaml`) plus a deploy to
+  every other host latent, costs a second gated file (`aws/chat-template.yaml`) plus a deploy to
   change a log level, is invisible to a reader of `main.py:46`, and cannot be pinned by the chat
   suite. Recorded so nobody re-derives it as the obvious missing option.
 
@@ -3718,7 +3718,7 @@ what a log line proves was accepted once without that step.
 > - **File: ONE.** `docker/chat/app/main.py` (on `SECURITY_GLOB` via
 >   `(^|/)docker/chat/app/(main|lambda_handler|live_env|live_gemini)\.py`). **Not cleared:**
 >   `lambda_handler.py` (§31.3 declines it on the merits, not for budget), `live_env.py`,
->   `live_gemini.py`, `alerts.py`, `aws/chglobex-mediaemplate.yaml` (§31.2's candidate C is NOT authorized),
+>   `live_gemini.py`, `alerts.py`, `aws/chat-template.yaml` (§31.2's candidate C is NOT authorized),
 >   anything under `aws/src/`. The test needs no clearance — `docker/chat/tests/` is off the glob.
 > - **Insertion point, at commit `847d2e9` where `main.py` is 1307 lines (`wc -l`):** line **45** is
 >   `logger = logging.getLogger(__name__)`, line **46** is `logging.basicConfig(level=logging.INFO)`.
@@ -3893,7 +3893,7 @@ model wait, and that remains true; the measured wait is just far shorter than as
 
 ### 33.4 A saving the measurement found: the HttpApi host is 9.2x over-provisioned
 
-`aws/chglobex-mediaemplate.yaml:75` sets `MemorySize: 1536`. Prod peak across 83 invocations is **166 MB** —
+`aws/chat-template.yaml:75` sets `MemorySize: 1536`. Prod peak across 83 invocations is **166 MB** —
 **9.2x headroom**, against the 3.1x the stream host was deliberately tuned to. Dropping it to 512
 cuts that host's GB-s by **3x**.
 
@@ -3996,7 +3996,7 @@ The brief attributes "162 MB real working set", the rejection of 256 at 1.6x, an
 108 ms at 512" to **§15.3**. They are not there. **§15.3 only commissioned the sweep** ("Re-measure
 M-1/M-2 at **1024 MB** … and **512 MB**"); the numbers that came back were recorded in the code, at
 **`aws/chat-stream-template.yaml:215-228`**. Cite that. (§15.3 also still points at
-`aws/chglobex-mediaemplate.yaml:58` for the 1536 line, which has been line **75** since §29's insertions;
+`aws/chat-template.yaml:58` for the 1536 line, which has been line **75** since §29's insertions;
 §33.4 and this section use 75. Shipped sections are not edited — recorded here so no reader is sent
 to the wrong line.) Second stale line-pointer in this ADR, which is itself the argument for the
 authorized edit carrying its rationale **in the template comment**, where it cannot drift away from
@@ -4016,7 +4016,7 @@ Deploy stage first, then prod. None of these block the edit; all three are cheap
   value — to 1024, NOT back to 1536** — under a new clearance that quotes the mint number which
   triggered it. 1536 never had a measurement and does not get to come back by default.
 - **V3 — know whether the OOM backstop is real.** An OOM kill surfaces as a Lambda `Errors` datapoint,
-  which `ChatLambdaErrorsAlarm` (`aws/chglobex-mediaemplate.yaml:160-177`, Sum ≥ 1 / 5 min) notifies through
+  which `ChatLambdaErrorsAlarm` (`aws/chat-template.yaml:160-177`, Sum ≥ 1 / 5 min) notifies through
   `ChatErrorTopic`. Two conditions gate that: `HasChatErrorAlarm` skips the alarm entirely when
   `ChatErrorAlarmEmail` is empty, and **§29.5 MEASURED that topic's only subscription as
   `PendingConfirmation`**. Run §29.5's `list-subscriptions` check. If it is still unconfirmed the
@@ -4025,8 +4025,8 @@ Deploy stage first, then prod. None of these block the edit; all three are cheap
 
 ### 34.6 The authorized edit, counted — and the SECURITY CLEARANCE
 
-**`aws/chglobex-mediaemplate.yaml` IS on `SECURITY_GLOB`** (`.claude/tdd.config:68`, which lists
-`(^|/)aws/(template|chglobex-mediaemplate)\.yaml`). The clearance is live at
+**`aws/chat-template.yaml` IS on `SECURITY_GLOB`** (`.claude/tdd.config:68`, which lists
+`(^|/)aws/(template|chat-template)\.yaml`). The clearance is live at
 `.claude/state/security-clearance` and is reproduced here verbatim-equivalent; the file is the
 operative copy and **is deleted the moment the edit lands**.
 
@@ -4056,7 +4056,7 @@ operative copy and **is deleted the moment the edit lands**.
 
 > ## SECURITY CLEARANCE — granted 2026-10-13, ADR-0022 DECISION 11
 >
-> - **File:** `aws/chglobex-mediaemplate.yaml`, 242 lines at commit `3d253be`. **This clearance covers that
+> - **File:** `aws/chat-template.yaml`, 242 lines at commit `3d253be`. **This clearance covers that
 >   file and nothing else.**
 > - **Edit:** REPLACE line **75** with the 19-line block above, verbatim.
 > - **Budget, counted off that block, not estimated: 19 added / 1 removed / 0 other lines modified.
@@ -4064,13 +4064,13 @@ operative copy and **is deleted the moment the edit lands**.
 >   line added, removed or modified is **outside** this clearance: come back.
 > - **Reviewer checks — all five were RUN against the authorized text before issuing** (candidate
 >   assembled in a scratchpad copy), so every expected value below is **observed, not predicted**:
->   1. `grep -cE '^ {4}MemorySize: 512$' aws/chglobex-mediaemplate.yaml` → **1**
->   2. `grep -cE '^ *MemorySize: 1536' aws/chglobex-mediaemplate.yaml` → **0** — the authorized comment does
+>   1. `grep -cE '^ {4}MemorySize: 512$' aws/chat-template.yaml` → **1**
+>   2. `grep -cE '^ *MemorySize: 1536' aws/chat-template.yaml` → **0** — the authorized comment does
 >      contain the characters `1536` twice ("the inherited 1536", "65 ms at 1536"); neither matches
 >      this anchored pattern, which is why the pattern is anchored.
->   3. `grep -cE '^ *MemorySize:' aws/chglobex-mediaemplate.yaml` → **1** (no stray second key)
->   4. `git diff --numstat -- aws/chglobex-mediaemplate.yaml` → ``19	1	aws/chglobex-mediaemplate.yaml``
->   5. `sam validate --template aws/chglobex-mediaemplate.yaml --region us-east-2` → *"is a valid SAM
+>   3. `grep -cE '^ *MemorySize:' aws/chat-template.yaml` → **1** (no stray second key)
+>   4. `git diff --numstat -- aws/chat-template.yaml` → ``19	1	aws/chat-template.yaml``
+>   5. `sam validate --template aws/chat-template.yaml --region us-east-2` → *"is a valid SAM
 >      Template"* (runs offline; it passed on the candidate)
 > - **Why it is safe at this size:** one scalar in `Globals.Function`, plus comment. No `NoEcho`
 >   parameter, no CORS origin, no key, no IAM policy or role, no event route, no alarm, no resource.

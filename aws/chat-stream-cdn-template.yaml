@@ -19,7 +19,7 @@ Parameters:
     Default: ''
     Description: >
       Optional second origin for the DEFAULT cache behavior — the chat HttpApi host from
-      aws/chglobex-mediaemplate.yaml (e.g. abc123.execute-api.us-east-2.amazonaws.com), so every
+      aws/chat-template.yaml (e.g. abc123.execute-api.us-east-2.amazonaws.com), so every
       non-streaming route (notably POST /api/live/session) keeps API Gateway's 5 rps / burst 10
       throttle. When EMPTY the default behavior also targets the Function URL origin (gate mode).
   DefaultOriginPath:

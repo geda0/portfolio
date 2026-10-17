@@ -24,7 +24,7 @@
 #              NEVER repoints the committed portfolio:chat-api-url meta — invariant 11 pins those hosts
 #              and test/frontend-api-url-env-guard.test.mjs enforces them; a host repoint is a
 #              separate, deliberate commit.
-# Chat on Lambda behind the throttled HttpApi (Gemini): set CHAT_SAM_STACK_NAME (legacy fallback), or CHAT_SAM_STACK_NAME_STAGE / CHAT_SAM_STACK_NAME_PROD per deploy env, plus GEMINI_API_KEY; template aws/chglobex-mediaemplate.yaml
+# Chat on Lambda behind the throttled HttpApi (Gemini): set CHAT_SAM_STACK_NAME (legacy fallback), or CHAT_SAM_STACK_NAME_STAGE / CHAT_SAM_STACK_NAME_PROD per deploy env, plus GEMINI_API_KEY; template aws/chat-template.yaml
 
 set -euo pipefail
 
@@ -464,7 +464,7 @@ echo "ChatTranscriptsTableName=${CHAT_TRANSCRIPTS_TABLE_NAME:-}"
 CHAT_SAM_CHAT_URL=""
 if [[ "${run_chat_sam}" == "true" ]]; then
   # Either a key OR a Secrets Manager ARN, same rule as the stream block. With an ARN the
-  # key is left EMPTY and aws/chglobex-mediaemplate.yaml omits GEMINI_API_KEY from the function
+  # key is left EMPTY and aws/chat-template.yaml omits GEMINI_API_KEY from the function
   # environment entirely (ADR-0025 decision 2) - which is the whole point, since
   # lambda:GetFunctionConfiguration would otherwise return it in plaintext.
   if [[ -z "${GEMINI_API_KEY:-}" && -z "${GEMINI_API_KEY_SECRET_ARN_RESOLVED:-}" ]]; then
@@ -472,7 +472,7 @@ if [[ "${run_chat_sam}" == "true" ]]; then
     exit 1
   fi
   CHAT_PO=(
-    # StageName is NOT cosmetic: aws/chglobex-mediaemplate.yaml maps it to CHAT_ENV, which _env_label()
+    # StageName is NOT cosmetic: aws/chat-template.yaml maps it to CHAT_ENV, which _env_label()
     # (docker/chat/app/alerts.py:97-103) puts in every alert subject as "[chat alert · {env}]".
     # The template default is `stage`, so a prod deploy that omits it labels PROD alerts as stage —
     # confidently wrong, and worse than the 'unknown' it replaced.
@@ -520,7 +520,7 @@ if [[ "${run_chat_sam}" == "true" ]]; then
     CHAT_PO+=("$(sam_param_override ChatAlertEmail "${CHAT_ALERT_TO}")")
     CHAT_PO+=("$(sam_param_override ChatAlertFromEmail "${CHAT_ALERT_FROM}")")
   fi
-  # No ChatAlertCooldownSeconds here: aws/chglobex-mediaemplate.yaml declares no such parameter and an
+  # No ChatAlertCooldownSeconds here: aws/chat-template.yaml declares no such parameter and an
   # unknown parameter key fails the whole deploy. Cooldown is an ECS-Express-only knob.
   chat_alerts_echo "lambda-httpapi ${CHAT_STACK_RESOLVED}"
   echo "sam deploy chat stack=${CHAT_STACK_RESOLVED} region=${REGION}"
@@ -745,7 +745,7 @@ if [[ "${CHAT_DEPLOY_TARGET}" == "stream" ]]; then
   echo "sam build chat stream (${AWS_DIR}/chat-stream-template.yaml → .aws-sam/build-chat-stream)"
   (
     cd "${AWS_DIR}"
-    # Dedicated --build-dir: .aws-sam/build-chat belongs to chglobex-mediaemplate.yaml / npm run sam:build:chat.
+    # Dedicated --build-dir: .aws-sam/build-chat belongs to chat-template.yaml / npm run sam:build:chat.
     sam build --template-file chat-stream-template.yaml --build-dir .aws-sam/build-chat-stream
   )
 
@@ -795,7 +795,7 @@ if [[ "${CHAT_DEPLOY_TARGET}" == "stream" ]]; then
   fi
   if [[ -z "${CHAT_STREAM_DEFAULT_ORIGIN}" ]]; then
     echo "note: no chat HttpApi host found for the CloudFront DEFAULT behavior — deploying ${CHAT_STREAM_CDN_STACK} in gate mode, where every route (including POST /api/live/session) goes straight to the Function URL and loses the API Gateway throttle." >&2
-    echo "  Set CHAT_SAM_STACK_NAME_STAGE / CHAT_SAM_STACK_NAME_PROD (so aws/chglobex-mediaemplate.yaml deploys and exports ChatApiBaseUrl), or pass CHAT_STREAM_DEFAULT_ORIGIN_DOMAIN explicitly." >&2
+    echo "  Set CHAT_SAM_STACK_NAME_STAGE / CHAT_SAM_STACK_NAME_PROD (so aws/chat-template.yaml deploys and exports ChatApiBaseUrl), or pass CHAT_STREAM_DEFAULT_ORIGIN_DOMAIN explicitly." >&2
   fi
 
   CHAT_STREAM_CDN_PO=(

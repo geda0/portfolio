@@ -124,7 +124,7 @@ const SPELLINGS = [
   // trailing slash, not more — `js/site-config.js` strips trailing slashes but leaves
   // interior runs untouched — and two base-join idioms that can produce it already sit
   // in aws/*.yaml: chat-stream-template.yaml joins `${Base}api/chat` with no separator
-  // because a Function URL ends in `/`, while chglobex-mediaemplate.yaml and
+  // because a Function URL ends in `/`, while chat-template.yaml and
   // chat-express-template.yaml expose bases with no trailing slash.
   // scripts/sync-site-api-urls.mjs writes its argument into the meta verbatim.
   (url) => url.replace('/api/chat', '//api/chat')

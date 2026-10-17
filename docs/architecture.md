@@ -431,7 +431,7 @@ flowchart TB
 
     subgraph Hosts["Where it runs (staging + prod)"]
         STREAMH["chat-stream λ<br/>aws/chat-stream-template.yaml<br/>image + LWA, RESPONSE_STREAM<br/>via CloudFront → Function URL"]
-        LAMBDAH["chat λ<br/>aws/chglobex-mediaemplate.yaml<br/>image + Mangum, buffered<br/>via chat HTTP API"]
+        LAMBDAH["chat λ<br/>aws/chat-template.yaml<br/>image + Mangum, buffered<br/>via chat HTTP API"]
     end
 
     POST -.->|"exact /api/chat"| STREAMH
@@ -533,7 +533,7 @@ flowchart TB
     subgraph Stacks["AWS SAM / CFN stacks"]
         S1["page / page-staging<br/>aws/template.yaml"]
         S3["chat-stream &lambda; + CDN<br/>portfolio-chat-lambda-stream-{stage,prod}<br/>portfolio-chat-stream-cdn-{stage,prod}"]
-        S2["chat &lambda; + HTTP API<br/>portfolio-chat-{stage,prod}<br/>aws/chglobex-mediaemplate.yaml"]
+        S2["chat &lambda; + HTTP API<br/>portfolio-chat-{stage,prod}<br/>aws/chat-template.yaml"]
     end
 
     subgraph Secrets["🔑 Secrets"]
@@ -683,7 +683,7 @@ flowchart LR
 | Chat FE | `js/chat.js` (SSE parser `readSseChat`), `js/agent-node.js`, `js/chat-live.js`, `js/chat-bus.js` |
 | Contact SAM | `aws/template.yaml`, `aws/src/contact-*.js` |
 | Chat stream &lambda; + CDN (shipped) | `aws/chat-stream-template.yaml`, `aws/chat-stream-cdn-template.yaml` |
-| Chat Lambda SAM (fallback) | `aws/chglobex-mediaemplate.yaml` |
+| Chat Lambda SAM (fallback) | `aws/chat-template.yaml` |
 | Chat app | `docker/chat/app/main.py` (SSE `_chat_stream` + `_persist_text_turn`; `POST /api/live/session` mint at `:916`; `POST /api/live/transcript` at `:1058`), `gemini_routing.py` (`astream` w/ fallback), `live_gemini.py` (ephemeral-token mint + timbre `setup`), `transcript_store.py`, `knowledge_context.py` |
 | Deploy | `scripts/integrate-and-deploy.sh`, `scripts/sync-site-api-urls.mjs` |
 | Local stack | `docker-compose.yml`, `docker/nginx.conf` |

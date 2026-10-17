@@ -40,7 +40,7 @@ const read = rel => readFileSync(join(REPO, rel), 'utf8')
 // template (chat-stream-cdn-template.yaml) is excluded on purpose: it runs no container.
 const CHAT_HOST_TEMPLATES = [
   'aws/chat-express-template.yaml', // ECS Express (prod + staging today)
-  'aws/chglobex-mediaemplate.yaml', // Lambda behind HttpApi
+  'aws/chat-template.yaml', // Lambda behind HttpApi
   'aws/chat-stream-template.yaml' // Lambda RESPONSE_STREAM (ADR-0022)
 ]
 
@@ -224,7 +224,7 @@ test('every chat-host template declares the env var that attributes an alert to 
 // parameter would be silent too, but which resource may legitimately be gated is a design the
 // ADR has not fixed — left for its own slice rather than guessed at here).
 const LAMBDA_CHAT_HOST_TEMPLATES = [
-  'aws/chglobex-mediaemplate.yaml', // Lambda behind HttpApi (BUFFERED)
+  'aws/chat-template.yaml', // Lambda behind HttpApi (BUFFERED)
   'aws/chat-stream-template.yaml' // Lambda RESPONSE_STREAM (ADR-0022)
 ]
 

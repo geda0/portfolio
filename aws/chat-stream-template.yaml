@@ -141,7 +141,7 @@ Parameters:
     MinValue: 0
     Description: >
       ADR-0022 M-4 hard ceiling. A Function URL has NO API Gateway in front of it,
-      so the 5 rps / burst 10 throttle at aws/chglobex-mediaemplate.yaml:67-69 does not
+      so the 5 rps / burst 10 throttle at aws/chat-template.yaml:67-69 does not
       apply here. Unthrottled public endpoint + per-invocation billing + a paid
       upstream model is a cost-amplification tail; reserved concurrency is the
       enforceable cap, and 5 is the intended value.
@@ -246,7 +246,7 @@ Resources:
         LogGroup: !Ref ChatStreamLogGroup
       Architectures:
         - x86_64
-      # Matches the existing Lambda chat stack (aws/chglobex-mediaemplate.yaml Globals).
+      # Matches the existing Lambda chat stack (aws/chat-template.yaml Globals).
       Timeout: 60
       # 512, not the 1536 the other chat stacks use. MEASURED on this stack, not guessed:
       # a real streaming turn reports `Max Memory Used: 162 MB` (a trivial /health request
@@ -335,7 +335,7 @@ Resources:
   # event; a quoted term matches anywhere in the event. That rules out per-type
   # metric Dimensions, hence ONE metric for all six event types. MetricName carries
   # host+env because a metric filter cannot set a STATIC dimension: a name shared
-  # with aws/chglobex-mediaemplate.yaml (or across stage/prod) makes each alarm fire on the
+  # with aws/chat-template.yaml (or across stage/prod) makes each alarm fire on the
   # other's alert lines. The log group and this filter are UNCONDITIONAL: the record
   # and the metric are always wanted; only the notification needs a destination.
   ChatAlertMetricFilter:
@@ -353,7 +353,7 @@ Resources:
           # there is no event at all, so this is not a heartbeat.
           DefaultValue: 0
 
-  # This stack has its own topic rather than importing aws/chglobex-mediaemplate.yaml's
+  # This stack has its own topic rather than importing aws/chat-template.yaml's
   # ChatErrorTopic ARN: cross-stack reuse would couple this stack's alerting to the
   # other stack's lifecycle, so deleting one would silently darken the other (§29.4).
   # PRECONDITION: SNS confirmation is per (topic, endpoint). A new topic mints a new

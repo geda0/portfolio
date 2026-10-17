@@ -41,12 +41,12 @@ const read = (rel) => readFileSync(join(REPO, rel), 'utf8')
 // 503 on /ready, and the Tier-1 alert filter — and break-glass is a redeploy with an empty
 // ARN, which is minutes.
 
-// Both chat hosts run the same app and both held the key. chglobex-mediaemplate.yaml is on
+// Both chat hosts run the same app and both held the key. chat-template.yaml is on
 // SECURITY_GLOB; it is pinned here anyway, because a gate is a review requirement, not an
 // exemption from the invariant.
 const TEMPLATES = [
   'aws/chat-stream-template.yaml',
-  'aws/chglobex-mediaemplate.yaml'
+  'aws/chat-template.yaml'
 ]
 
 for (const rel of TEMPLATES) {

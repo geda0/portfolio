@@ -96,7 +96,7 @@ configuration problem rather than a typo.
 ### 6. Template shape differs between the two hosts, and that is not cosmetic
 
 `aws/chat-stream-template.yaml` declares an explicit `AWS::IAM::Role`, whose `Policies` take
-`{PolicyName, PolicyDocument}`. `aws/chglobex-mediaemplate.yaml` uses SAM's
+`{PolicyName, PolicyDocument}`. `aws/chat-template.yaml` uses SAM's
 `AWS::Serverless::Function` `Policies` with an implicit role, which takes the `Statement:`
 form. Copying the former into the latter fails the SAM transform
 (`InvalidResourceException … Policy at index 1 … is not valid`). Measured both ways.
@@ -116,7 +116,7 @@ form. Copying the former into the latter fails the SAM transform
 
 ## This ADR is the security review
 
-`aws/chglobex-mediaemplate.yaml` is on `SECURITY_GLOB`, which refuses edits until an architect or
+`aws/chat-template.yaml` is on `SECURITY_GLOB`, which refuses edits until an architect or
 security review has happened. Following ADR-0008's posture, **this document is that review**
 for the credential-residency surface, and it records the review's findings rather than merely
 asserting that one occurred. The review raised two blocking corrections — the SAM `Policies`
@@ -151,11 +151,11 @@ a wrong premise in the original proposal.
    one failed cold start disables that container for its whole warm life rather than for one
    request. Re-attempting at the chain factory and the mint entry would bound the damage — it
    touches gated modules, so it is its own slice.
-3. **`SECURITY_GLOB` drift.** The glob covers `aws/(template|chglobex-mediaemplate)\.yaml` only.
+3. **`SECURITY_GLOB` drift.** The glob covers `aws/(template|chat-template)\.yaml` only.
    `chat-stream-template.yaml` and `chat-express-template.yaml` both carry IAM and credential
    wiring and are ungated — which is how `a6325d2` shipped the streaming half of this very
    decision with no security review.
-4. **`ADMIN_API_KEY` is not declared** in `chglobex-mediaemplate.yaml`'s environment, so
+4. **`ADMIN_API_KEY` is not declared** in `chat-template.yaml`'s environment, so
    `/api/chat/host-status` is permanently 401 on that host; `SMOKE_PROBE_KEY` deploys empty on
    prod, so `/api/chat/smoke` is permanently closed. Both fail closed, so neither is a
    vulnerability — but both are dead diagnostics.
